@@ -2053,8 +2053,12 @@
       const isNight = period === "night";
       const numericCode = Number(code);
       const severeStorm = numericCode >= 96 || clampPercent(metrics.severe) >= 8;
+      const thundersnow = isThundersnow(kind, metrics);
 
-      if (kind === "storm") return severeStorm ? "strong-thunder.png" : (windy ? "thunder-wind.png" : "thunder.png");
+      if (kind === "storm") {
+        if (thundersnow) return "thundersnow.png";
+        return severeStorm ? "strong-thunder.png" : (windy ? "thunder-wind.png" : "thunder.png");
+      }
       if (kind === "snow") {
         if (windy) return "snow-wind.png";
         if ([71, 85].includes(numericCode)) return "light-snow.png";
