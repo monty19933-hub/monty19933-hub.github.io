@@ -350,36 +350,33 @@
     .icon-wrap.stormy::after {
       content: "";
       position: absolute;
-      left: 24%;
-      top: 42%;
-      width: 52%;
-      height: 58%;
+      inset: -18px 0 0;
       z-index: 3;
-      opacity: 0.62;
+      opacity: 0.5;
       pointer-events: none;
       background-image:
         radial-gradient(ellipse at 50% 45%, rgba(34, 111, 185, 0.95) 0 2.4px, transparent 3px),
         radial-gradient(ellipse at 50% 45%, rgba(64, 143, 205, 0.78) 0 1.8px, transparent 2.5px);
-      background-size: 24px 30px, 34px 40px;
+      background-size: 30px 36px, 44px 50px;
       background-position: 0 0, 13px 9px;
       animation: rain-drops 1.35s linear infinite;
     }
 
     .icon-wrap.rain-chance::after {
-      opacity: 0.42;
-      background-size: 38px 46px, 54px 58px;
+      opacity: 0.34;
+      background-size: 48px 56px, 68px 74px;
       animation-duration: 1.9s;
     }
 
     .icon-wrap.rain-steady::after {
-      opacity: 0.68;
-      background-size: 22px 28px, 32px 38px;
+      opacity: 0.56;
+      background-size: 30px 36px, 42px 50px;
       animation-duration: 1.12s;
     }
 
     .icon-wrap.rain-heavy::after {
-      opacity: 0.9;
-      background-size: 15px 22px, 23px 29px;
+      opacity: 0.76;
+      background-size: 22px 28px, 31px 38px;
       animation-duration: 0.72s;
     }
 
@@ -393,27 +390,27 @@
       background-image:
         url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='%236a9fc7' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M12 3v18M5 7l14 10M19 7L5 17M8 4l4 4 4-4M8 20l4-4 4 4'/%3E%3C/g%3E%3C/svg%3E"),
         url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M12 4v16M6 8l12 8M18 8L6 16'/%3E%3C/g%3E%3C/svg%3E");
-      background-size: 30px 30px, 42px 42px;
+      background-size: 22px 22px, 32px 32px;
       background-position: 0 0, 12px 8px;
       animation: snow-fall 3.4s linear infinite;
     }
 
     .icon-wrap.snow-flurries::after,
     .icon-wrap.snow-chance::after {
-      opacity: 0.42;
-      background-size: 46px 46px, 64px 64px;
+      opacity: 0.32;
+      background-size: 36px 36px, 52px 52px;
       animation-duration: 5.4s;
     }
 
     .icon-wrap.snow-steady::after {
-      opacity: 0.68;
-      background-size: 30px 30px, 42px 42px;
+      opacity: 0.58;
+      background-size: 23px 23px, 34px 34px;
       animation-duration: 3.5s;
     }
 
     .icon-wrap.snow-heavy::after {
-      opacity: 0.9;
-      background-size: 22px 22px, 31px 31px;
+      opacity: 0.78;
+      background-size: 17px 17px, 25px 25px;
       animation-duration: 2.2s;
     }
 
