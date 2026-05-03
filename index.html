@@ -150,9 +150,10 @@
 
     .location-search-form {
       display: grid;
-      grid-template-columns: minmax(180px, 1fr) auto auto;
+      grid-template-columns: minmax(180px, 360px) auto auto;
       gap: 8px;
       align-items: center;
+      justify-content: start;
     }
 
     .location-search-form label {
@@ -184,6 +185,15 @@
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
+    }
+
+    .search-results:not(:empty) {
+      width: min(100%, 680px);
+      padding: 8px;
+      border: 1px solid rgba(80, 96, 112, 0.16);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.9);
+      box-shadow: 0 10px 22px rgba(71, 83, 98, 0.08);
     }
 
     .stamp strong {
@@ -348,12 +358,14 @@
 
     .period-title {
       display: flex;
-      justify-content: space-between;
+      justify-content: center;
       gap: 8px;
       align-items: baseline;
+      text-align: center;
     }
 
     .period-title h3 {
+      width: 100%;
       margin: 0;
       font-size: 0.95rem;
       letter-spacing: 0;
@@ -588,6 +600,7 @@
       min-height: 44px;
       font-weight: 750;
       line-height: 1.2;
+      text-align: center;
       overflow-wrap: anywhere;
     }
 
@@ -695,6 +708,10 @@
       flex-wrap: wrap;
       color: var(--muted);
       font-size: 0.86rem;
+    }
+
+    .prob-head span {
+      font-weight: 800;
     }
 
     .prob-head strong {
@@ -1133,6 +1150,8 @@
 
     let locations = loadFavoriteLocations();
     let searchResults = [];
+    let locationSearchTimer = 0;
+    let locationSearchToken = 0;
     let point = locations[0];
     let forecastUrl = "";
     let alertsUrl = "";
@@ -1397,22 +1416,52 @@
         event.preventDefault();
         const query = locationSearchInput.value.trim();
         if (!query) return;
+        clearTimeout(locationSearchTimer);
+        await runLocationSearch(query, false);
+      });
 
-        locationSearchStatus.textContent = `Searching for ${query}...`;
+      locationSearchInput.addEventListener("input", () => {
+        const query = locationSearchInput.value.trim();
+        clearTimeout(locationSearchTimer);
+
+        if (!query) {
+          searchResults = [];
+          renderSearchResults(searchResults);
+          locationSearchStatus.textContent = "Pinned favorites stay on this browser unless you unpin them.";
+          return;
+        }
+
+        if (query.length < 2 && !/^\d/.test(query)) {
+          searchResults = [];
+          renderSearchResults(searchResults);
+          locationSearchStatus.textContent = "Keep typing for city suggestions.";
+          return;
+        }
+
+        locationSearchStatus.textContent = "Finding suggestions...";
+        locationSearchTimer = window.setTimeout(() => runLocationSearch(query, true), 350);
+      });
+
+      async function runLocationSearch(query, isSuggestion) {
+        const token = ++locationSearchToken;
+        locationSearchStatus.textContent = isSuggestion ? "Finding suggestions..." : `Searching for ${query}...`;
         locationSearchResults.innerHTML = "";
 
         try {
-          searchResults = await searchLocations(query);
-          if (!searchResults.length) {
+          const results = await searchLocations(query);
+          if (token !== locationSearchToken) return;
+          searchResults = results;
+          if (!results.length) {
             locationSearchStatus.textContent = `No city or ZIP match found for ${query}.`;
             return;
           }
-          locationSearchStatus.textContent = `Choose a result, or use the star to pin it.`;
+          locationSearchStatus.textContent = isSuggestion ? "Suggestions" : "Choose a result, or use the star to pin it.";
           renderSearchResults(searchResults);
         } catch (error) {
+          if (token !== locationSearchToken) return;
           locationSearchStatus.textContent = `Location search failed: ${error.message}`;
         }
-      });
+      }
 
       locationSearchResults.addEventListener("click", (event) => {
         const choice = event.target.closest("[data-search-index]");
@@ -1861,7 +1910,7 @@
 
     function formatWindDirection(value) {
       if (!Number.isFinite(value)) return "--";
-      return `${compassDirection(value)} ${Math.round(value)}\u00b0`;
+      return compassDirection(value);
     }
 
     function compassDirection(value) {
