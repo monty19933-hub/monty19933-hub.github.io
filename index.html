@@ -1,0 +1,1208 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>97223 Seven Day Model Forecast</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #18202a;
+      --muted: #5d6876;
+      --line: #d9e1e8;
+      --panel: #ffffff;
+      --canvas: #f4f7f5;
+      --sun: #f2b744;
+      --cloud: #8293a6;
+      --rain: #2f78b7;
+      --snow: #6a9fc7;
+      --storm: #7c5ea8;
+      --alert: #b14b32;
+      --clear: #dff1ff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        linear-gradient(180deg, rgba(224, 240, 244, 0.9), rgba(244, 247, 245, 1) 260px),
+        var(--canvas);
+    }
+
+    button {
+      font: inherit;
+    }
+
+    .page {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 36px;
+    }
+
+    .masthead {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 18px;
+      align-items: end;
+      padding-bottom: 18px;
+      border-bottom: 1px solid rgba(24, 32, 42, 0.14);
+    }
+
+    h1 {
+      margin: 0 0 4px;
+      font-size: clamp(1.75rem, 3vw, 3.1rem);
+      line-height: 1.02;
+      letter-spacing: 0;
+    }
+
+    .subtitle,
+    .source-note {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .stamp {
+      display: grid;
+      gap: 4px;
+      justify-items: end;
+      min-width: 220px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .location-toggle {
+      margin: 16px 0 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .location-toggle button {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.74);
+      color: var(--ink);
+      padding: 9px 12px;
+      cursor: pointer;
+      font-weight: 750;
+    }
+
+    .location-toggle button:hover,
+    .location-toggle button:focus-visible {
+      border-color: #1f7a64;
+      outline: none;
+    }
+
+    .location-toggle button[aria-pressed="true"] {
+      color: #fff;
+      background: #1f7a64;
+      border-color: #1f7a64;
+    }
+
+    .stamp strong {
+      color: var(--ink);
+      font-size: 1.1rem;
+    }
+
+    .alerts {
+      margin: 18px 0 20px;
+      border: 1px solid color-mix(in srgb, var(--alert), white 58%);
+      background: #fff7f3;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .alerts__bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(177, 75, 50, 0.18);
+    }
+
+    .alerts__bar h2 {
+      margin: 0;
+      font-size: 1rem;
+      letter-spacing: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .alert-icon {
+      width: 24px;
+      height: 24px;
+      display: inline-grid;
+      place-items: center;
+      flex: 0 0 auto;
+      color: #4e2d11;
+      font-size: 0.82rem;
+      font-weight: 900;
+      line-height: 1;
+      background: #f5c542;
+      clip-path: polygon(50% 4%, 96% 92%, 4% 92%);
+      filter: drop-shadow(0 1px 1px rgba(71, 40, 14, 0.25));
+    }
+
+    .alert-icon span {
+      transform: translateY(3px);
+    }
+
+    .alerts__list {
+      display: grid;
+      gap: 8px;
+      padding: 10px;
+    }
+
+    .alert-button {
+      width: 100%;
+      border: 1px solid rgba(177, 75, 50, 0.22);
+      background: #fff;
+      color: var(--ink);
+      border-radius: 6px;
+      padding: 12px;
+      text-align: left;
+      cursor: pointer;
+      display: grid;
+      gap: 5px;
+    }
+
+    .alert-button:hover,
+    .alert-button:focus-visible {
+      border-color: var(--alert);
+      outline: none;
+    }
+
+    .alert-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      font-weight: 750;
+    }
+
+    .alert-title > span:first-child {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .alert-title .alert-icon {
+      width: 20px;
+      height: 20px;
+      font-size: 0.7rem;
+    }
+
+    .alert-title > span:last-child {
+      color: var(--alert);
+      white-space: nowrap;
+    }
+
+    .forecast-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(285px, 1fr));
+      gap: 12px;
+    }
+
+    .day-card {
+      min-height: 510px;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 12px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.86);
+      border-radius: 8px;
+      box-shadow: 0 10px 22px rgba(71, 83, 98, 0.08);
+    }
+
+    .day-card.today {
+      border-color: #1f7a64;
+      box-shadow: 0 0 0 2px rgba(31, 122, 100, 0.14), 0 10px 22px rgba(71, 83, 98, 0.08);
+    }
+
+    .day-name {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: baseline;
+    }
+
+    .day-name strong {
+      font-size: 1.04rem;
+    }
+
+    .date {
+      color: var(--muted);
+      font-size: 0.82rem;
+      white-space: nowrap;
+    }
+
+    .periods {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .period {
+      display: grid;
+      grid-template-rows: auto 112px auto auto 1fr;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .period + .period {
+      border-left: 1px solid var(--line);
+      padding-left: 12px;
+    }
+
+    .period-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: baseline;
+    }
+
+    .period-title h3 {
+      margin: 0;
+      font-size: 0.95rem;
+      letter-spacing: 0;
+    }
+
+    .period-title span {
+      color: var(--muted);
+      font-size: 0.74rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .icon-wrap {
+      display: grid;
+      place-items: center;
+      border-radius: 7px;
+      background: #ffffff;
+      border: 1px solid rgba(80, 96, 112, 0.16);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .icon-wrap.night {
+      background: #ffffff;
+      border-color: rgba(80, 62, 140, 0.18);
+    }
+
+    .weather-icon-img {
+      width: 104px;
+      height: 104px;
+      object-fit: contain;
+      position: relative;
+      z-index: 2;
+      transform-origin: center;
+      image-rendering: auto;
+    }
+
+    .icon-wrap.rainy .weather-icon-img,
+    .icon-wrap.snowy .weather-icon-img {
+      animation: weather-bob 2.4s ease-in-out infinite;
+    }
+
+    .icon-wrap.stormy .weather-icon-img {
+      animation: storm-shake 1.7s ease-in-out infinite;
+    }
+
+    .icon-wrap.windy .weather-icon-img {
+      animation: wind-sway 1.9s ease-in-out infinite;
+    }
+
+    .icon-wrap.day.clear::before,
+    .icon-wrap.day.mostly-clear::before,
+    .icon-wrap.day.partly-cloudy::before {
+      content: "";
+      position: absolute;
+      inset: 10% 15%;
+      z-index: 1;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle, rgba(255, 238, 62, 0.44), rgba(255, 198, 22, 0.18) 38%, rgba(255, 198, 22, 0) 68%),
+        conic-gradient(from 0deg, rgba(255, 229, 41, 0), rgba(255, 229, 41, 0.22), rgba(255, 229, 41, 0), rgba(255, 229, 41, 0.14), rgba(255, 229, 41, 0));
+      filter: blur(6px);
+      animation: sun-back-glow 3.4s ease-in-out infinite, sun-ray-spin 14s linear infinite;
+    }
+
+    .icon-wrap.day.clear .weather-icon-img,
+    .icon-wrap.day.mostly-clear .weather-icon-img,
+    .icon-wrap.day.partly-cloudy .weather-icon-img {
+      animation: sun-icon-pulse 2.6s ease-in-out infinite;
+    }
+
+    .icon-wrap.rainy::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      opacity: 0.34;
+      background-image: repeating-linear-gradient(
+        110deg,
+        transparent 0 14px,
+        rgba(47, 120, 183, 0.8) 15px 17px,
+        transparent 18px 30px
+      );
+      animation: rain-fall 0.72s linear infinite;
+    }
+
+    .icon-wrap.snowy::after {
+      content: "";
+      position: absolute;
+      inset: -20px 0 0;
+      z-index: 1;
+      opacity: 0.7;
+      background-image:
+        radial-gradient(circle, rgba(106, 159, 199, 0.9) 0 2px, transparent 2.5px),
+        radial-gradient(circle, rgba(255, 255, 255, 0.95) 0 1.7px, transparent 2.2px);
+      background-size: 26px 26px, 38px 38px;
+      background-position: 0 0, 12px 8px;
+      animation: snow-fall 3.4s linear infinite;
+    }
+
+    .icon-wrap.stormy::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      background: rgba(255, 230, 84, 0.55);
+      opacity: 0;
+      animation: storm-flash 2.8s steps(1, end) infinite;
+    }
+
+    .condition {
+      min-height: 38px;
+      font-weight: 750;
+      line-height: 1.2;
+    }
+
+    .temp {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 8px;
+      background: #fbfcfc;
+    }
+
+    .label {
+      color: var(--muted);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .value {
+      display: block;
+      margin-top: 2px;
+      font-size: 1.38rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .probabilities {
+      display: grid;
+      gap: 10px;
+      align-self: end;
+    }
+
+    .prob {
+      display: grid;
+      gap: 5px;
+    }
+
+    .prob-head {
+      display: flex;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 0.86rem;
+    }
+
+    .track {
+      height: 8px;
+      border-radius: 99px;
+      background: #e8eef2;
+      overflow: hidden;
+    }
+
+    .fill {
+      height: 100%;
+      width: var(--pct);
+      border-radius: inherit;
+      background: var(--rain);
+    }
+
+    .fill.snow {
+      background: var(--snow);
+    }
+
+    .fill.storm {
+      background: var(--storm);
+    }
+
+    .loading,
+    .error {
+      margin-top: 18px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 8px;
+      color: var(--muted);
+    }
+
+    .error {
+      border-color: color-mix(in srgb, var(--alert), white 55%);
+      color: var(--alert);
+    }
+
+    footer {
+      margin-top: 20px;
+      display: grid;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.45;
+    }
+
+    footer a {
+      color: #225f8f;
+    }
+
+    .icon-credit {
+      font-size: 0.82rem;
+    }
+
+    @keyframes weather-bob {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-3px); }
+    }
+
+    @keyframes storm-shake {
+      0%, 100% { transform: translateX(0); }
+      12% { transform: translateX(-2px); }
+      24% { transform: translateX(2px); }
+      36% { transform: translateX(-1px); }
+      48% { transform: translateX(1px); }
+      60% { transform: translateX(0); }
+    }
+
+    @keyframes wind-sway {
+      0%, 100% { transform: translateX(0) skewX(0deg); }
+      35% { transform: translateX(-4px) skewX(-2deg); }
+      70% { transform: translateX(3px) skewX(1deg); }
+    }
+
+    @keyframes sun-back-glow {
+      0%, 100% { opacity: 0.28; transform: scale(0.9); }
+      50% { opacity: 0.62; transform: scale(1.07); }
+    }
+
+    @keyframes sun-ray-spin {
+      from { rotate: 0deg; }
+      to { rotate: 360deg; }
+    }
+
+    @keyframes sun-icon-pulse {
+      0%, 100% { filter: drop-shadow(0 0 0 rgba(255, 210, 0, 0)); transform: scale(1); }
+      50% { filter: drop-shadow(0 0 5px rgba(255, 210, 0, 0.38)); transform: scale(1.015); }
+    }
+
+    @keyframes rain-fall {
+      from { background-position: 0 -30px; }
+      to { background-position: 0 30px; }
+    }
+
+    @keyframes snow-fall {
+      from { background-position: 0 -30px, 12px -18px; }
+      to { background-position: 0 36px, 12px 48px; }
+    }
+
+    @keyframes storm-flash {
+      0%, 73%, 100% { opacity: 0; }
+      74% { opacity: 0.56; }
+      78% { opacity: 0; }
+      82% { opacity: 0.36; }
+      86% { opacity: 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .weather-icon-img,
+      .icon-wrap::before,
+      .icon-wrap::after {
+        animation: none !important;
+      }
+    }
+
+    dialog {
+      width: min(720px, calc(100% - 28px));
+      border: 0;
+      border-radius: 8px;
+      padding: 0;
+      box-shadow: 0 24px 80px rgba(20, 28, 36, 0.35);
+    }
+
+    dialog::backdrop {
+      background: rgba(18, 28, 36, 0.46);
+    }
+
+    .dialog-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: start;
+      padding: 18px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .dialog-head h3 {
+      margin: 0;
+      font-size: 1.35rem;
+    }
+
+    .close {
+      width: 36px;
+      height: 36px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      cursor: pointer;
+      font-size: 1.25rem;
+      line-height: 1;
+    }
+
+    .dialog-body {
+      padding: 18px;
+      display: grid;
+      gap: 12px;
+      line-height: 1.5;
+    }
+
+    .dialog-body p {
+      margin: 0;
+      white-space: pre-line;
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .detail {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 10px;
+      background: #fbfcfc;
+    }
+
+    @media (max-width: 720px) {
+      .page {
+        width: min(100% - 22px, 1180px);
+        padding-top: 18px;
+      }
+
+      .masthead {
+        grid-template-columns: 1fr;
+      }
+
+      .stamp {
+        justify-items: start;
+        min-width: 0;
+      }
+
+      .forecast-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .day-card {
+        min-height: 0;
+      }
+
+      .periods {
+        gap: 10px;
+      }
+
+      .period {
+        grid-template-rows: auto 96px auto auto 1fr;
+      }
+
+      .period + .period {
+        padding-left: 10px;
+      }
+
+      .weather-icon-img {
+        width: 92px;
+        height: 92px;
+      }
+
+      .detail-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="masthead">
+      <div>
+        <h1 id="forecastTitle">97223 Seven Day Forecast</h1>
+        <p class="subtitle" id="forecastSubtitle">NOAA/NCEP NBM computer model guidance for Tigard, Oregon.</p>
+      </div>
+      <div class="stamp">
+        <span>Today</span>
+        <strong id="todayStamp">Loading...</strong>
+        <span id="updatedStamp">Fetching model data</span>
+      </div>
+    </header>
+
+    <nav class="location-toggle" aria-label="Forecast location">
+      <button type="button" data-location="97223" aria-pressed="true">97223 Tigard</button>
+      <button type="button" data-location="97067" aria-pressed="false">97067 Welches</button>
+    </nav>
+
+    <section class="alerts" aria-labelledby="alertsTitle">
+      <div class="alerts__bar">
+        <h2 id="alertsTitle"><span class="alert-icon" aria-hidden="true"><span>!</span></span>NWS Watches and Warnings</h2>
+        <span id="alertCount">Checking...</span>
+      </div>
+      <div class="alerts__list" id="alertsList">
+        <div class="source-note">Loading active NWS alerts for the point location.</div>
+      </div>
+    </section>
+
+    <section id="status" class="loading">Loading 7 days of model data...</section>
+    <section class="forecast-grid" id="forecastGrid" aria-live="polite"></section>
+
+    <footer>
+      <p class="source-note">Forecast cards use Open-Meteo's NOAA/NCEP NBM model feed only. The NWS feed is used only for active watches, warnings, advisories, and statements.</p>
+      <p class="source-note icon-credit">Icons use the local 98-06 TWC icon pack you provided, with motion added only for rain, snow, thunderstorm, and wind states.</p>
+      <p class="source-note">
+        Sources:
+        <a id="modelLink" href="#" target="_blank" rel="noreferrer">model JSON</a>,
+        <a id="alertsLink" href="#" target="_blank" rel="noreferrer">NWS alert JSON</a>,
+        <a href="https://open-meteo.com/en/docs/gfs-api" target="_blank" rel="noreferrer">Open-Meteo GFS/NBM docs</a>,
+        <a href="https://www.weather.gov/documentation/services-web-alerts" target="_blank" rel="noreferrer">NWS alerts docs</a>,
+        <a href="https://www.deviantart.com/malekmasoud/art/98-06-TWC-Icon-Mega-Pack-CHRISTMAS-UPDATE-1277563023" target="_blank" rel="noreferrer">local 98-06 TWC icon pack source</a>.
+      </p>
+    </footer>
+  </main>
+
+  <dialog id="alertDialog">
+    <div class="dialog-head">
+      <div>
+        <h3 id="dialogTitle">Alert</h3>
+        <p class="source-note" id="dialogHeadline"></p>
+      </div>
+      <button class="close" id="closeDialog" aria-label="Close alert details">&times;</button>
+    </div>
+    <div class="dialog-body" id="dialogBody"></div>
+  </dialog>
+
+  <script>
+    const locations = [
+      {
+        zip: "97223",
+        city: "Tigard",
+        name: "Tigard, OR",
+        latitude: 45.4386,
+        longitude: -122.7774,
+        timezone: "America/Los_Angeles"
+      },
+      {
+        zip: "97067",
+        city: "Welches",
+        name: "Welches, OR",
+        latitude: 45.3170,
+        longitude: -121.9800,
+        timezone: "America/Los_Angeles"
+      }
+    ];
+
+    let point = locations[0];
+    let forecastUrl = "";
+    let alertsUrl = "";
+
+    function buildForecastUrl(location) {
+      const forecastParams = new URLSearchParams({
+        latitude: location.latitude,
+        longitude: location.longitude,
+        timezone: location.timezone,
+        forecast_days: "7",
+        models: "ncep_nbm_conus",
+        temperature_unit: "fahrenheit",
+        precipitation_unit: "inch",
+        wind_speed_unit: "mph",
+        daily: [
+          "weather_code",
+          "temperature_2m_max",
+          "temperature_2m_min",
+          "precipitation_probability_max",
+          "rain_sum",
+          "snowfall_sum",
+          "precipitation_sum"
+        ].join(","),
+        hourly: [
+          "rain_probability",
+          "snowfall_probability",
+          "thunderstorm_probability",
+          "weather_code",
+          "cloud_cover",
+          "temperature_2m",
+          "wind_speed_10m",
+          "wind_gusts_10m",
+          "is_day"
+        ].join(",")
+      });
+
+      return `https://api.open-meteo.com/v1/forecast?${forecastParams.toString()}`;
+    }
+
+    function buildAlertsUrl(location) {
+      return `https://api.weather.gov/alerts/active?point=${location.latitude},${location.longitude}`;
+    }
+
+    const grid = document.querySelector("#forecastGrid");
+    const status = document.querySelector("#status");
+    const alertsList = document.querySelector("#alertsList");
+    const alertCount = document.querySelector("#alertCount");
+    const dialog = document.querySelector("#alertDialog");
+    const dialogTitle = document.querySelector("#dialogTitle");
+    const dialogHeadline = document.querySelector("#dialogHeadline");
+    const dialogBody = document.querySelector("#dialogBody");
+
+    document.querySelector("#todayStamp").textContent = formatFullDate(new Date());
+    document.querySelector("#closeDialog").addEventListener("click", () => dialog.close());
+    document.querySelectorAll("[data-location]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const next = locations.find((location) => location.zip === button.dataset.location);
+        if (next && next.zip !== point.zip) setLocation(next);
+      });
+    });
+
+    const weatherMap = [
+      { codes: [0], label: "Clear", kind: "clear" },
+      { codes: [1], label: "Mostly Clear", kind: "mostly-clear" },
+      { codes: [2], label: "Partly Cloudy", kind: "partly-cloudy" },
+      { codes: [3], label: "Cloudy", kind: "cloudy" },
+      { codes: [45, 48], label: "Fog", kind: "fog" },
+      { codes: [51, 53, 55, 56, 57], label: "Drizzle", kind: "rain" },
+      { codes: [61, 63, 65, 66, 67], label: "Rain", kind: "rain" },
+      { codes: [80, 81, 82], label: "Showers", kind: "rain" },
+      { codes: [71, 73, 75, 77, 85, 86], label: "Snow", kind: "snow" },
+      { codes: [95, 96, 99], label: "Thunderstorms", kind: "storm" }
+    ];
+
+    const rainyKinds = new Set(["rain"]);
+    const snowyKinds = new Set(["snow"]);
+    const stormyKinds = new Set(["storm"]);
+    const iconData = {};
+    const embeddedForecastData = {};
+    const iconBase = "assets/twc-mega/";
+
+    function weatherFor(code, period, metrics = {}) {
+      const match = weatherMap.find((entry) => entry.codes.includes(Number(code))) || { label: "Variable", kind: "cloudy" };
+      const label = period === "day" && match.label === "Clear" ? "Sunny" : match.label;
+      const windy = Number(metrics.windSpeed) >= 20 || Number(metrics.windGust) >= 30;
+      const motionClass = stormyKinds.has(match.kind)
+        ? "stormy"
+        : rainyKinds.has(match.kind)
+          ? "rainy"
+          : snowyKinds.has(match.kind)
+            ? "snowy"
+            : windy
+              ? "windy"
+              : "still";
+      const iconFile = iconFileFor(match.kind, period, code, windy);
+
+      return {
+        ...match,
+        label,
+        period,
+        iconFile,
+        iconUrl: iconData[iconFile] || `${iconBase}${iconFile}`,
+        iconClass: `${match.kind} ${motionClass}${windy ? " windy" : ""}`
+      };
+    }
+
+    function iconFileFor(kind, period, code, windy) {
+      const isNight = period === "night";
+      const numericCode = Number(code);
+
+      if (kind === "storm") return windy ? "thunder-wind.png" : (numericCode >= 96 ? "strong-thunder.png" : "thunder.png");
+      if (kind === "snow") {
+        if (windy) return "snow-wind.png";
+        if ([71, 85].includes(numericCode)) return "light-snow.png";
+        if ([75, 86].includes(numericCode)) return "heavy-snow.png";
+        if (numericCode === 77) return "flurries.png";
+        return "snow.png";
+      }
+      if (kind === "rain") {
+        if (windy) return "rain-wind.png";
+        if ([51, 53, 55, 56, 57].includes(numericCode)) return "drizzle.png";
+        if ([61, 80].includes(numericCode)) return "light-rain.png";
+        if ([65, 82].includes(numericCode)) return "heavy-rain.png";
+        if ([81].includes(numericCode)) return "few-showers.png";
+        return "rain.png";
+      }
+      if (kind === "fog") return "fog.png";
+      if (kind === "cloudy") return windy ? "cloudy-wind.png" : "cloudy.png";
+      if (kind === "partly-cloudy") {
+        if (windy) return isNight ? "partly-night-wind.png" : "partly-day-wind.png";
+        return isNight ? "partly-night.png" : "partly-day.png";
+      }
+      if (kind === "mostly-clear") {
+        if (windy) return isNight ? "clear-wind.png" : "sunny-wind.png";
+        return isNight ? "fair-night.png" : "fair-day.png";
+      }
+      if (kind === "clear") {
+        if (windy) return isNight ? "clear-wind.png" : "sunny-wind.png";
+        return isNight ? "clear-night.png" : "sunny.png";
+      }
+      return windy ? "windy.png" : "cloudy.png";
+    }
+
+    function formatFullDate(date) {
+      return new Intl.DateTimeFormat("en-US", {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+        timeZone: point.timezone
+      }).format(date);
+    }
+
+    function formatShortDate(isoDate) {
+      const date = new Date(`${isoDate}T12:00:00`);
+      return {
+        weekday: new Intl.DateTimeFormat("en-US", { weekday: "short", timeZone: point.timezone }).format(date),
+        date: new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: point.timezone }).format(date)
+      };
+    }
+
+    function roundTemp(value) {
+      return Number.isFinite(value) ? `${Math.round(value)}\u00b0` : "--";
+    }
+
+    function clampPercent(value) {
+      if (!Number.isFinite(value)) return 0;
+      return Math.max(0, Math.min(100, Math.round(value)));
+    }
+
+    function hourlyIndicesForPeriod(hourly, isoDate, isDaytime) {
+      const times = hourly.time || [];
+      const dayFlags = hourly.is_day || [];
+      const expectedFlag = isDaytime ? 1 : 0;
+      const indices = [];
+
+      for (let index = 0; index < times.length; index += 1) {
+        if (String(times[index]).startsWith(isoDate) && Number(dayFlags[index]) === expectedFlag) {
+          indices.push(index);
+        }
+      }
+
+      return indices;
+    }
+
+    function maxForIndices(hourly, key, indices) {
+      let max = 0;
+      const values = hourly[key] || [];
+      indices.forEach((index) => {
+        const value = Number(values[index]);
+        if (Number.isFinite(value)) max = Math.max(max, value);
+      });
+      return clampPercent(max);
+    }
+
+    function numericMaxForIndices(hourly, key, indices) {
+      let max = 0;
+      const values = hourly[key] || [];
+      indices.forEach((index) => {
+        const value = Number(values[index]);
+        if (Number.isFinite(value)) max = Math.max(max, value);
+      });
+      return max;
+    }
+
+    function periodTemperature(hourly, indices, isDaytime, fallback) {
+      const temperatures = hourly.temperature_2m || [];
+      const values = indices
+        .map((index) => Number(temperatures[index]))
+        .filter(Number.isFinite);
+
+      if (!values.length) return fallback;
+      return isDaytime ? Math.max(...values) : Math.min(...values);
+    }
+
+    function dominantWeatherCode(hourly, indices, fallbackCode) {
+      const values = hourly.weather_code || [];
+      const counts = new Map();
+
+      indices.forEach((index) => {
+        const code = Number(values[index]);
+        if (Number.isFinite(code)) counts.set(code, (counts.get(code) || 0) + 1);
+      });
+
+      if (!counts.size) return fallbackCode;
+
+      return [...counts.entries()]
+        .sort((a, b) => b[1] - a[1] || severeRank(b[0]) - severeRank(a[0]))[0][0];
+    }
+
+    function severeRank(code) {
+      if ([95, 96, 99].includes(code)) return 5;
+      if ([71, 73, 75, 77, 85, 86].includes(code)) return 4;
+      if ([61, 63, 65, 66, 67, 80, 81, 82].includes(code)) return 3;
+      if ([51, 53, 55, 56, 57].includes(code)) return 2;
+      if ([45, 48].includes(code)) return 1;
+      return 0;
+    }
+
+    function periodSummary(data, isoDate, dailyIndex, isDaytime) {
+      const period = isDaytime ? "day" : "night";
+      const indices = hourlyIndicesForPeriod(data.hourly, isoDate, isDaytime);
+      const fallbackTemp = isDaytime
+        ? data.daily.temperature_2m_max[dailyIndex]
+        : data.daily.temperature_2m_min[dailyIndex];
+      const code = dominantWeatherCode(data.hourly, indices, data.daily.weather_code[dailyIndex]);
+      const windSpeed = numericMaxForIndices(data.hourly, "wind_speed_10m", indices);
+      const windGust = numericMaxForIndices(data.hourly, "wind_gusts_10m", indices);
+      const weather = weatherFor(code, period, { windSpeed, windGust });
+
+      return {
+        period,
+        title: isDaytime ? "Daytime" : "Nighttime",
+        tempLabel: isDaytime ? "High" : "Low",
+        temp: periodTemperature(data.hourly, indices, isDaytime, fallbackTemp),
+        weather,
+        rain: maxForIndices(data.hourly, "rain_probability", indices),
+        snow: maxForIndices(data.hourly, "snowfall_probability", indices),
+        thunder: maxForIndices(data.hourly, "thunderstorm_probability", indices),
+        windSpeed,
+        windGust
+      };
+    }
+
+    function probabilityRow(name, value, type) {
+      const pct = clampPercent(value);
+      return `
+        <div class="prob">
+          <div class="prob-head"><span>${name}</span><strong>${pct}%</strong></div>
+          <div class="track"><div class="fill ${type}" style="--pct: ${pct}%"></div></div>
+        </div>
+      `;
+    }
+
+    function renderPeriod(summary) {
+      return `
+        <section class="period ${summary.period}">
+          <div class="period-title">
+            <h3>${summary.title}</h3>
+            <span>${summary.tempLabel}</span>
+          </div>
+          <div class="icon-wrap ${summary.period} ${escapeAttribute(summary.weather.iconClass)}">
+            <img class="weather-icon-img" src="${escapeAttribute(summary.weather.iconUrl)}" alt="${escapeAttribute(summary.weather.label)}">
+          </div>
+          <div class="condition">${escapeHtml(summary.weather.label)}</div>
+          <div class="temp">
+            <span class="label">${summary.tempLabel} Temp</span>
+            <span class="value">${roundTemp(summary.temp)}</span>
+          </div>
+          <div class="probabilities">
+            ${probabilityRow("Rain", summary.rain, "rain")}
+            ${probabilityRow("Snow", summary.snow, "snow")}
+            ${probabilityRow("Thunder", summary.thunder, "storm")}
+          </div>
+        </section>
+      `;
+    }
+
+    function renderForecast(data) {
+      const days = data.daily.time || [];
+      const todayIso = new Intl.DateTimeFormat("en-CA", {
+        timeZone: point.timezone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit"
+      }).format(new Date());
+
+      grid.innerHTML = days.map((isoDate, index) => {
+        const dateBits = formatShortDate(isoDate);
+        const day = periodSummary(data, isoDate, index, true);
+        const night = periodSummary(data, isoDate, index, false);
+
+        return `
+          <article class="day-card ${isoDate === todayIso ? "today" : ""}">
+            <div class="day-name">
+              <strong>${isoDate === todayIso ? "Today" : dateBits.weekday}</strong>
+              <span class="date">${dateBits.date}</span>
+            </div>
+            <div class="periods">
+              ${renderPeriod(day)}
+              ${renderPeriod(night)}
+            </div>
+          </article>
+        `;
+      }).join("");
+
+      status.hidden = true;
+      document.querySelector("#updatedStamp").textContent = `Updated ${new Intl.DateTimeFormat("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        timeZoneName: "short",
+        timeZone: point.timezone
+      }).format(new Date())}`;
+    }
+
+    function renderAlerts(data) {
+      const features = Array.isArray(data.features) ? data.features : [];
+      alertCount.textContent = features.length ? `${features.length} active` : "None active";
+
+      if (!features.length) {
+        alertsList.innerHTML = `<div class="source-note">No active NWS watches, warnings, advisories, or statements for ${point.zip}.</div>`;
+        return;
+      }
+
+      alertsList.innerHTML = features.map((feature, index) => {
+        const props = feature.properties || {};
+        const expires = props.expires ? formatAlertTime(props.expires) : "No expiration listed";
+        return `
+          <button class="alert-button" type="button" data-alert-index="${index}">
+            <span class="alert-title">
+              <span><span class="alert-icon" aria-hidden="true"><span>!</span></span>${escapeHtml(props.event || "NWS Alert")}</span>
+              <span>${escapeHtml(props.severity || "Alert")}</span>
+            </span>
+            <span>${escapeHtml(props.headline || props.description || "Click for details.")}</span>
+            <span class="source-note">Expires: ${escapeHtml(expires)}</span>
+          </button>
+        `;
+      }).join("");
+
+      alertsList.querySelectorAll("[data-alert-index]").forEach((button) => {
+        button.addEventListener("click", () => showAlert(features[Number(button.dataset.alertIndex)]));
+      });
+    }
+
+    function showAlert(feature) {
+      const props = feature.properties || {};
+      const detailUrl = props["@id"] || props.id || alertsUrl;
+      dialogTitle.textContent = props.event || "NWS Alert";
+      dialogHeadline.textContent = props.headline || "";
+      dialogBody.innerHTML = `
+        <div class="detail-grid">
+          <div class="detail"><span class="label">Severity</span><span class="value">${escapeHtml(props.severity || "--")}</span></div>
+          <div class="detail"><span class="label">Certainty</span><span class="value">${escapeHtml(props.certainty || "--")}</span></div>
+          <div class="detail"><span class="label">Effective</span><span>${escapeHtml(formatAlertTime(props.effective))}</span></div>
+          <div class="detail"><span class="label">Expires</span><span>${escapeHtml(formatAlertTime(props.expires))}</span></div>
+        </div>
+        <p>${escapeHtml(props.description || "No description supplied by NWS.")}</p>
+        ${props.instruction ? `<p><strong>Instruction:</strong> ${escapeHtml(props.instruction)}</p>` : ""}
+        <p><a href="${escapeAttribute(detailUrl)}" target="_blank" rel="noreferrer">Open official NWS alert JSON</a></p>
+      `;
+      dialog.showModal();
+    }
+
+    function formatAlertTime(value) {
+      if (!value) return "--";
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return value;
+      return new Intl.DateTimeFormat("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        timeZoneName: "short",
+        timeZone: point.timezone
+      }).format(date);
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "\"": "&quot;",
+        "'": "&#39;"
+      }[char]));
+    }
+
+    function escapeAttribute(value) {
+      return escapeHtml(value).replace(/`/g, "&#96;");
+    }
+
+    async function fetchJson(url, options = {}) {
+      const response = await fetch(url, options);
+      if (!response.ok) {
+        throw new Error(`${response.status} ${response.statusText}`);
+      }
+      return response.json();
+    }
+
+    let loadToken = 0;
+
+    function setLocation(location) {
+      point = location;
+      forecastUrl = buildForecastUrl(location);
+      alertsUrl = buildAlertsUrl(location);
+
+      document.querySelector("#forecastTitle").textContent = `${location.zip} Seven Day Forecast`;
+      document.querySelector("#forecastSubtitle").textContent = `NOAA/NCEP NBM computer model guidance for ${location.name}.`;
+      document.querySelector("#modelLink").href = forecastUrl;
+      document.querySelector("#alertsLink").href = alertsUrl;
+      document.querySelectorAll("[data-location]").forEach((button) => {
+        button.setAttribute("aria-pressed", String(button.dataset.location === location.zip));
+      });
+
+      grid.innerHTML = "";
+      status.className = "loading";
+      status.hidden = false;
+      status.textContent = `Loading 7 days of model data for ${location.zip}...`;
+      alertCount.textContent = "Checking...";
+      alertsList.innerHTML = `<div class="source-note">Loading active NWS alerts for ${location.zip}.</div>`;
+      document.querySelector("#updatedStamp").textContent = "Fetching model data";
+
+      init();
+    }
+
+    async function init() {
+      const token = ++loadToken;
+
+      try {
+        const [forecast, alerts] = await Promise.all([
+          fetchJson(forecastUrl),
+          fetchJson(alertsUrl, { headers: { Accept: "application/geo+json" } })
+        ]);
+
+        if (token !== loadToken) return;
+        renderForecast(forecast);
+        renderAlerts(alerts);
+      } catch (error) {
+        if (token !== loadToken) return;
+        const fallback = embeddedForecastData[point.zip];
+        if (fallback?.forecast && fallback?.alerts) {
+          renderForecast(fallback.forecast);
+          renderAlerts(fallback.alerts);
+          document.querySelector("#updatedStamp").textContent = `Snapshot ${fallback.generatedAt || "embedded"}`;
+          return;
+        }
+        status.className = "error";
+        status.textContent = `Unable to load live data: ${error.message}`;
+        alertCount.textContent = "Unavailable";
+        alertsList.innerHTML = `<div class="source-note">NWS alerts could not be loaded.</div>`;
+      }
+    }
+
+    setLocation(locations[0]);
+  </script>
+</body>
+</html>
