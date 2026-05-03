@@ -933,20 +933,26 @@
     }
 
     .wind-item strong {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      min-width: 0;
       font-size: 0.72rem;
       line-height: 1.1;
-      white-space: normal;
-      overflow-wrap: anywhere;
+      white-space: nowrap;
+      overflow-wrap: normal;
     }
 
     .wind-arrow {
       display: inline-grid;
+      flex: 0 0 auto;
       place-items: center;
-      width: 1.2em;
-      height: 1.2em;
-      margin-left: 2px;
+      width: 1em;
+      height: 1em;
+      margin-left: 0;
       color: #0f4f7a;
-      font-size: 1.28em;
+      font-size: 1.18em;
       font-weight: 950;
       line-height: 1;
       text-shadow: 0 0 0 #0f4f7a, 0 1px 1px rgba(15, 79, 122, 0.22);
@@ -1187,8 +1193,16 @@
     }
 
     .metric-pill strong {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      min-width: 0;
       font-size: 0.82rem;
       white-space: nowrap;
+    }
+
+    .hourly-wind .metric-pill strong {
+      justify-content: center;
     }
 
     .fill {
