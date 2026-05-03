@@ -634,23 +634,26 @@
     .wind-summary {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 6px;
+      gap: 4px;
     }
 
     .wind-item {
       display: grid;
       gap: 2px;
       min-width: 0;
-      padding: 7px 6px;
+      padding: 7px 4px;
       border: 1px solid rgba(80, 96, 112, 0.16);
       border-radius: 6px;
       background: rgba(255, 255, 255, 0.7);
+      text-align: center;
+      overflow: hidden;
     }
 
     .wind-item strong {
-      font-size: 0.78rem;
+      font-size: 0.72rem;
       line-height: 1.1;
-      white-space: nowrap;
+      white-space: normal;
+      overflow-wrap: anywhere;
     }
 
     .wind-arrow {
@@ -658,7 +661,7 @@
       place-items: center;
       width: 1.1em;
       height: 1.1em;
-      margin-left: 3px;
+      margin-left: 2px;
       color: #225f8f;
       transform: rotate(var(--wind-to, 0deg));
       transform-origin: center;
@@ -1169,7 +1172,7 @@
   <main class="page">
     <header class="masthead">
       <div>
-        <h1 id="forecastTitle">97223 Nine Day Forecast</h1>
+        <h1 id="forecastTitle">Tigard, OR: Nine Day Forecast</h1>
         <p class="subtitle" id="forecastSubtitle">Short-range HRRR/NAM blend with NBM extended guidance for Tigard, OR.</p>
       </div>
       <div class="stamp">
@@ -1306,10 +1309,10 @@
     const modelModes = {
       blend: {
         label: "HRRR/NAM + NBM",
-        subtitle: (location) => location.modelSet === "gfs"
+        subtitle: (location) => useGlobalModel(location)
           ? `GFS computer model guidance for ${location.name}.`
           : `Short-range HRRR/NAM blend with NBM extended guidance for ${location.name}.`,
-        loading: (location) => location.modelSet === "gfs" ? "GFS model data" : "HRRR/NAM plus NBM model data"
+        loading: (location) => useGlobalModel(location) ? "GFS model data" : "HRRR/NAM plus NBM model data"
       }
     };
 
@@ -1341,8 +1344,8 @@
 
     function buildForecastUrl(location, options = {}) {
       const {
-        model = location.modelSet === "gfs" ? "gfs_seamless" : "ncep_nbm_conus",
-        endpoint = location.modelSet === "gfs" ? "gfs" : "forecast",
+        model = useGlobalModel(location) ? "gfs_seamless" : "ncep_nbm_conus",
+        endpoint = useGlobalModel(location) ? "gfs" : "forecast",
         forecastDays = "9"
       } = options;
       const forecastParams = new URLSearchParams({
@@ -1425,7 +1428,11 @@
     }
 
     function titleLocation(location) {
-      return location.zip || location.name || location.city || "Selected Location";
+      return location.name || location.city || location.zip || "Selected Location";
+    }
+
+    function useGlobalModel(location) {
+      return location.modelSet === "gfs" || (location.countryCode && location.countryCode !== "US");
     }
 
     function normalizeLocation(location) {
@@ -1437,7 +1444,9 @@
         name: location.name || location.city || location.zip || "Selected Location",
         latitude,
         longitude,
-        timezone: location.timezone || "auto"
+        timezone: location.timezone || "auto",
+        countryCode: location.countryCode || "US",
+        modelSet: location.modelSet || ""
       };
     }
 
@@ -1671,20 +1680,26 @@
         name: `${city}${state ? `, ${state}` : ""}`,
         latitude: place.latitude,
         longitude: place.longitude,
-        timezone: "auto"
+        timezone: "auto",
+        countryCode: "US"
       });
     }
 
     function locationFromGeocode(result) {
       if (!Number.isFinite(Number(result.latitude)) || !Number.isFinite(Number(result.longitude))) return null;
-      const state = stateAbbreviations[result.admin1] || result.admin1 || result.country_code || "";
+      const countryCode = result.country_code || "";
+      const state = countryCode === "US"
+        ? stateAbbreviations[result.admin1] || result.admin1 || countryCode
+        : result.admin1 || countryCode;
       const city = result.name || "Selected Location";
       return normalizeLocation({
         city,
         name: `${city}${state ? `, ${state}` : ""}`,
         latitude: result.latitude,
         longitude: result.longitude,
-        timezone: result.timezone || "auto"
+        timezone: result.timezone || "auto",
+        countryCode,
+        modelSet: countryCode && countryCode !== "US" ? "gfs" : ""
       });
     }
 
@@ -2120,7 +2135,7 @@
     }
 
     function formatWindSpeed(value) {
-      return Number.isFinite(value) ? `${Math.round(value)} mph` : "--";
+      return Number.isFinite(value) ? `${Math.round(value)}mph` : "--";
     }
 
     function formatWindDirection(value) {
@@ -2406,6 +2421,10 @@
       return response.json();
     }
 
+    function emptyAlerts() {
+      return { type: "FeatureCollection", features: [] };
+    }
+
     async function fetchRecordExtremes(location, forecast) {
       const forecastDays = forecast?.daily?.time || [];
       if (!forecastDays.length) return {};
@@ -2460,7 +2479,7 @@
     }
 
     function buildBlendSources(location) {
-      if (location.modelSet === "gfs") {
+      if (useGlobalModel(location)) {
         return [
           {
             key: "gfs",
@@ -2502,6 +2521,10 @@
         .map((result) => result.value);
 
       if (!sources.length) {
+        if (!useGlobalModel(location)) {
+          const data = await fetchJson(buildForecastUrl(location, { model: "gfs_seamless", endpoint: "gfs" }));
+          return { ...data, modelLabel: "GFS" };
+        }
         throw new Error("No blend model sources loaded");
       }
 
@@ -2611,10 +2634,10 @@
       const loadingLabel = typeof modeConfig.loading === "function" ? modeConfig.loading(location) : modeConfig.loading;
 
       const display = locationDisplay(location);
-      document.querySelector("#forecastTitle").textContent = `${titleLocation(location)} Nine Day Forecast`;
+      document.querySelector("#forecastTitle").textContent = `${titleLocation(location)}: Nine Day Forecast`;
       document.querySelector("#forecastSubtitle").textContent = modeConfig.subtitle(location);
       document.querySelector("#modelLink").href = forecastUrl;
-      document.querySelector("#modelLink").textContent = location.modelSet === "gfs"
+      document.querySelector("#modelLink").textContent = useGlobalModel(location)
         ? "GFS source JSON"
         : "NBM source JSON";
       document.querySelector("#alertsLink").href = alertsUrl;
@@ -2640,7 +2663,7 @@
         if (forecast.timezone) point.timezone = forecast.timezone;
         const [recordExtremes, alerts] = await Promise.all([
           fetchRecordExtremes(point, forecast).catch(() => ({})),
-          fetchJson(alertsUrl, { headers: { Accept: "application/geo+json" } })
+          fetchJson(alertsUrl, { headers: { Accept: "application/geo+json" } }).catch(() => emptyAlerts())
         ]);
 
         if (token !== loadToken) return;
