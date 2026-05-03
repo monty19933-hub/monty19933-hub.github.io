@@ -1697,6 +1697,8 @@
         name: "Welches, OR",
         latitude: 45.3170,
         longitude: -121.9800,
+        modelLatitude: 45.3762,
+        modelLongitude: -122.0167,
         timezone: "America/Los_Angeles"
       },
       {
@@ -1765,14 +1767,15 @@
     ];
 
     function buildForecastUrl(location, options = {}) {
+      const modelPoint = modelLocation(location);
       const {
         model = useGlobalModel(location) ? "gfs_seamless" : "ncep_nbm_conus",
         endpoint = useGlobalModel(location) ? "gfs" : "forecast",
         forecastDays = "9"
       } = options;
       const forecastParams = new URLSearchParams({
-        latitude: location.latitude,
-        longitude: location.longitude,
+        latitude: modelPoint.latitude,
+        longitude: modelPoint.longitude,
         timezone: location.timezone,
         forecast_days: forecastDays,
         models: model,
@@ -1784,6 +1787,15 @@
       });
 
       return `https://api.open-meteo.com/v1/${endpoint}?${forecastParams.toString()}`;
+    }
+
+    function modelLocation(location) {
+      const latitude = Number(location.modelLatitude);
+      const longitude = Number(location.modelLongitude);
+      if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+        return { ...location, latitude, longitude };
+      }
+      return location;
     }
 
     function buildAlertsUrl(location) {
@@ -1799,12 +1811,13 @@
     }
 
     function buildRecordUrl(location) {
+      const modelPoint = modelLocation(location);
       const currentYear = new Date().getFullYear();
       const startYear = 1991;
       const endYear = Math.max(startYear, currentYear - 1);
       const params = new URLSearchParams({
-        latitude: location.latitude,
-        longitude: location.longitude,
+        latitude: modelPoint.latitude,
+        longitude: modelPoint.longitude,
         timezone: location.timezone,
         temperature_unit: "fahrenheit",
         start_date: `${startYear}-01-01`,
@@ -1891,6 +1904,8 @@
         name: location.name || location.city || location.zip || "Selected Location",
         latitude,
         longitude,
+        modelLatitude: Number.isFinite(Number(location.modelLatitude)) ? Number(location.modelLatitude) : undefined,
+        modelLongitude: Number.isFinite(Number(location.modelLongitude)) ? Number(location.modelLongitude) : undefined,
         timezone: location.timezone || "auto",
         countryCode: location.countryCode || "US",
         modelSet: location.modelSet || ""
@@ -3506,8 +3521,9 @@
 
     function recordCacheKey(location) {
       const currentYear = new Date().getFullYear();
-      const latitude = Number(location.latitude).toFixed(3);
-      const longitude = Number(location.longitude).toFixed(3);
+      const modelPoint = modelLocation(location);
+      const latitude = Number(modelPoint.latitude).toFixed(3);
+      const longitude = Number(modelPoint.longitude).toFixed(3);
       return `${latitude},${longitude},${location.timezone || "auto"},${currentYear - 1}`;
     }
 
