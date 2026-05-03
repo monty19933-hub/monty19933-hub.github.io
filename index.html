@@ -335,7 +335,7 @@
 
     .period {
       display: grid;
-      grid-template-rows: auto 112px auto auto auto;
+      grid-template-rows: auto 112px auto auto auto auto;
       gap: 10px;
       min-width: 0;
       align-content: start;
@@ -616,6 +616,28 @@
 
     .period.night .temp .label {
       color: #1d4ed8;
+    }
+
+    .wind-summary {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 6px;
+    }
+
+    .wind-item {
+      display: grid;
+      gap: 2px;
+      min-width: 0;
+      padding: 7px 6px;
+      border: 1px solid rgba(80, 96, 112, 0.16);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.7);
+    }
+
+    .wind-item strong {
+      font-size: 0.78rem;
+      line-height: 1.1;
+      white-space: nowrap;
     }
 
     .label {
@@ -960,7 +982,7 @@
       }
 
       .period {
-        grid-template-rows: auto 104px auto auto auto;
+        grid-template-rows: auto 104px auto auto auto auto;
       }
 
       .period + .period {
@@ -1147,6 +1169,7 @@
       "temperature_2m",
       "wind_speed_10m",
       "wind_gusts_10m",
+      "wind_direction_10m",
       "is_day"
     ];
 
@@ -1702,6 +1725,28 @@
       return isDaytime ? Math.max(...values) : Math.min(...values);
     }
 
+    function windDirectionForIndices(hourly, indices) {
+      const directions = hourly.wind_direction_10m || [];
+      const speeds = hourly.wind_speed_10m || [];
+      let eastComponent = 0;
+      let northComponent = 0;
+      let totalWeight = 0;
+
+      indices.forEach((index) => {
+        const direction = Number(directions[index]);
+        if (!Number.isFinite(direction)) return;
+        const speed = Number(speeds[index]);
+        const weight = Number.isFinite(speed) && speed > 0 ? speed : 1;
+        const radians = direction * Math.PI / 180;
+        eastComponent += Math.sin(radians) * weight;
+        northComponent += Math.cos(radians) * weight;
+        totalWeight += weight;
+      });
+
+      if (!totalWeight) return NaN;
+      return (Math.atan2(eastComponent, northComponent) * 180 / Math.PI + 360) % 360;
+    }
+
     function dominantWeatherCode(hourly, indices, fallbackCode) {
       const values = hourly.weather_code || [];
       const counts = new Map();
@@ -1734,6 +1779,7 @@
         : data.daily.temperature_2m_min[dailyIndex];
       const windSpeed = numericMaxForIndices(data.hourly, "wind_speed_10m", indices);
       const windGust = numericMaxForIndices(data.hourly, "wind_gusts_10m", indices);
+      const windDirection = windDirectionForIndices(data.hourly, indices);
       const cape = numericMaxForIndices(data.hourly, "cape", indices);
       const rainAmount = sumForIndices(data.hourly, "rain", indices);
       const snowAmount = sumForIndices(data.hourly, "snowfall", indices);
@@ -1762,6 +1808,7 @@
         severe,
         windSpeed,
         windGust,
+        windDirection,
         cape
       };
     }
@@ -1806,6 +1853,30 @@
     function formatAmount(value) {
       if (!Number.isFinite(value) || value <= 0.004) return "0.00 in";
       return `${value.toFixed(value < 0.1 ? 2 : 2)} in`;
+    }
+
+    function formatWindSpeed(value) {
+      return Number.isFinite(value) ? `${Math.round(value)} mph` : "--";
+    }
+
+    function formatWindDirection(value) {
+      if (!Number.isFinite(value)) return "--";
+      return `${compassDirection(value)} ${Math.round(value)}\u00b0`;
+    }
+
+    function compassDirection(value) {
+      const directions = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
+      return directions[Math.round((((value % 360) + 360) % 360) / 22.5) % directions.length];
+    }
+
+    function windSummary(summary) {
+      return `
+        <div class="wind-summary" aria-label="${escapeAttribute(summary.title)} wind forecast">
+          <div class="wind-item"><span class="label">Wind</span><strong>${formatWindSpeed(summary.windSpeed)}</strong></div>
+          <div class="wind-item"><span class="label">Gusts</span><strong>${formatWindSpeed(summary.windGust)}</strong></div>
+          <div class="wind-item"><span class="label">Dir</span><strong>${formatWindDirection(summary.windDirection)}</strong></div>
+        </div>
+      `;
     }
 
     function probabilityRow(name, value, type, amount = "") {
@@ -1887,6 +1958,7 @@
             <span class="value">${roundTemp(summary.temp)}</span>
             ${tempRecordNote(summary)}
           </div>
+          ${windSummary(summary)}
           <div class="probabilities">
             ${probabilityRow("Chance of Rain", summary.rain, "rain", formatAmount(summary.rainAmount))}
             ${probabilityRow("Chance of Snow", summary.snow, "snow", formatAmount(summary.snowAmount))}
@@ -2148,6 +2220,7 @@
         blended.hourly[key] = hourlyTimes.map((time, index) => {
           const values = valuesForBlend(sources, "hourly", key, time, index);
           if (key === "weather_code") return blendWeatherCode(values, blended.hourly[key]?.[index]);
+          if (key === "wind_direction_10m") return blendDirection(values, blended.hourly[key]?.[index]);
           return blendAverage(values, blended.hourly[key]?.[index]);
         });
       });
@@ -2181,6 +2254,20 @@
     function blendAverage(values, fallback) {
       if (!values.length) return fallback;
       return values.reduce((sum, value) => sum + value, 0) / values.length;
+    }
+
+    function blendDirection(values, fallback) {
+      if (!values.length) return fallback;
+      let eastComponent = 0;
+      let northComponent = 0;
+
+      values.forEach((value) => {
+        const radians = value * Math.PI / 180;
+        eastComponent += Math.sin(radians);
+        northComponent += Math.cos(radians);
+      });
+
+      return (Math.atan2(eastComponent, northComponent) * 180 / Math.PI + 360) % 360;
     }
 
     function blendWeatherCode(values, fallback) {
