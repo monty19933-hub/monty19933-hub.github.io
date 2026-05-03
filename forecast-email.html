@@ -1187,21 +1187,40 @@
       display: block;
     }
 
-    .detail.alert-severity {
-      --alert-severity-text: var(--alert);
-      background: var(--alert-severity-text);
-      color: #fff;
-      border-color: color-mix(in srgb, var(--alert-severity-text), black 24%);
-    }
-
-    .detail.alert-severity.alert-warning {
-      --alert-severity-text: #fff;
+    .detail.alert-severity,
+    .detail.alert-certainty {
+      --detail-alert-bg: #fbfcfc;
+      background: var(--detail-alert-bg);
       color: var(--ink);
-      background: var(--alert-severity-text);
       border-color: rgba(80, 96, 112, 0.24);
     }
 
-    .detail.alert-severity .label {
+    .detail.alert-severity.severity-moderate {
+      --detail-alert-bg: #FF7700;
+      color: #fff;
+      border-color: rgba(147, 64, 0, 0.5);
+    }
+
+    .detail.alert-severity.severity-severe {
+      --detail-alert-bg: #C91B00;
+      color: #fff;
+      border-color: rgba(119, 19, 5, 0.58);
+    }
+
+    .detail.alert-certainty.certainty-probable {
+      --detail-alert-bg: #FFEF00;
+      color: var(--ink);
+      border-color: rgba(156, 138, 0, 0.38);
+    }
+
+    .detail.alert-certainty.certainty-likely {
+      --detail-alert-bg: #C91B00;
+      color: #fff;
+      border-color: rgba(119, 19, 5, 0.58);
+    }
+
+    .detail.alert-severity .label,
+    .detail.alert-certainty .label {
       color: currentColor;
       opacity: 0.78;
     }
@@ -2652,17 +2671,32 @@
       return "";
     }
 
+    function alertSeverityClass(severity) {
+      const value = String(severity || "").toLowerCase();
+      if (value === "moderate") return "severity-moderate";
+      if (value === "severe") return "severity-severe";
+      return "";
+    }
+
+    function alertCertaintyClass(certainty) {
+      const value = String(certainty || "").toLowerCase();
+      if (value === "probable") return "certainty-probable";
+      if (value === "likely") return "certainty-likely";
+      return "";
+    }
+
     function showAlert(feature) {
       if (!feature) return;
       const props = feature.properties || {};
       const detailUrl = props["@id"] || props.id || alertsUrl;
-      const alertClass = alertCategoryClass(props.event);
+      const severityClass = alertSeverityClass(props.severity);
+      const certaintyClass = alertCertaintyClass(props.certainty);
       dialogTitle.textContent = props.event || "NWS Alert";
       dialogHeadline.textContent = props.headline || "";
       dialogBody.innerHTML = `
         <div class="detail-grid">
-          <div class="detail alert-severity ${alertClass}"><span class="label">Severity</span><span class="value">${escapeHtml(props.severity || "--")}</span></div>
-          <div class="detail"><span class="label">Certainty</span><span class="value">${escapeHtml(props.certainty || "--")}</span></div>
+          <div class="detail alert-severity ${severityClass}"><span class="label">Severity</span><span class="value">${escapeHtml(props.severity || "--")}</span></div>
+          <div class="detail alert-certainty ${certaintyClass}"><span class="label">Certainty</span><span class="value">${escapeHtml(props.certainty || "--")}</span></div>
           <div class="detail"><span class="label">Effective</span><span class="detail-value">${escapeHtml(formatAlertTime(props.effective))}</span></div>
           <div class="detail"><span class="label">Expires</span><span class="detail-value">${escapeHtml(formatAlertTime(props.expires))}</span></div>
         </div>
