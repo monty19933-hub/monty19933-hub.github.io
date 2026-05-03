@@ -265,6 +265,24 @@
       gap: 5px;
     }
 
+    .alert-button.alert-statement {
+      background: #EED9C4;
+    }
+
+    .alert-button.alert-advisory {
+      background: #FFEF00;
+    }
+
+    .alert-button.alert-watch {
+      background: #FFA500;
+    }
+
+    .alert-button.alert-warning {
+      background: #E73121;
+      color: #fff;
+      border-color: rgba(131, 18, 10, 0.5);
+    }
+
     .alert-button:hover,
     .alert-button:focus-visible {
       border-color: var(--alert);
@@ -293,6 +311,11 @@
     .alert-title > span:last-child {
       color: var(--alert);
       white-space: nowrap;
+    }
+
+    .alert-button.alert-warning .alert-title > span:last-child,
+    .alert-button.alert-warning .source-note {
+      color: rgba(255, 255, 255, 0.92);
     }
 
     .forecast-grid {
@@ -589,6 +612,14 @@
       filter: drop-shadow(0 0 9px rgba(255, 247, 176, 0.95)) drop-shadow(0 0 12px rgba(87, 185, 255, 0.75));
       opacity: 0;
       animation: severe-bolt-flash 1.55s steps(1, end) infinite;
+    }
+
+    .icon-wrap.stormy.severe-storm::before {
+      background:
+        url("assets/effects/severe-lightning-bolt.png") 24% -26px / 112px 154px no-repeat,
+        url("assets/effects/severe-lightning-bolt.png") 82% -14px / 92px 132px no-repeat,
+        radial-gradient(circle at 50% 38%, rgba(255, 238, 94, 0.72), rgba(115, 211, 255, 0.28) 28%, transparent 64%);
+      animation: severe-double-bolt-flash 1.75s steps(1, end) infinite;
     }
 
     .icon-wrap.stormy {
@@ -1001,6 +1032,16 @@
       54% { opacity: 0.24; transform: translateX(-2px) scale(0.99); }
       59% { opacity: 0.82; transform: translateX(-7px) scale(1.08); }
       62% { opacity: 0.36; transform: translateX(-3px) scale(1.02); }
+    }
+
+    @keyframes severe-double-bolt-flash {
+      0%, 43%, 50%, 63%, 70%, 100% { opacity: 0; transform: translateX(0) scale(0.97); }
+      44% { opacity: 0.98; transform: translateX(-6px) scale(1.06); }
+      47% { opacity: 0.26; transform: translateX(-2px) scale(1); }
+      51% { opacity: 0.9; transform: translateX(6px) scale(1.04); }
+      54% { opacity: 0.32; transform: translateX(2px) scale(1.01); }
+      64% { opacity: 0.78; transform: translateX(-4px) scale(1.08); }
+      67% { opacity: 0.24; transform: translateX(3px) scale(1.02); }
     }
 
     @keyframes storm-panel-flash {
@@ -1773,6 +1814,7 @@
       const match = weatherMap.find((entry) => entry.codes.includes(Number(code))) || { label: "Variable", kind: "cloudy" };
       const label = period === "day" && match.label === "Clear" ? "Sunny" : match.label;
       const windy = Number(metrics.windSpeed) >= 20 || Number(metrics.windGust) >= 30;
+      const severeStorm = match.kind === "storm" && (Number(code) >= 96 || clampPercent(metrics.severe) >= 8);
       const intensityClass = precipitationIntensityClass(match.kind, code, metrics);
       const motionClass = stormyKinds.has(match.kind)
         ? "stormy"
@@ -1793,7 +1835,7 @@
         period,
         iconFile,
         iconUrl: iconData[iconFile] || `${iconBase}${iconFile}`,
-        iconClass: `${match.kind} ${motionClass}${intensityClass ? ` ${intensityClass}` : ""}${windy ? " windy" : ""}`
+        iconClass: `${match.kind} ${motionClass}${severeStorm ? " severe-storm" : ""}${intensityClass ? ` ${intensityClass}` : ""}${windy ? " windy" : ""}`
       };
     }
 
@@ -2358,8 +2400,9 @@
       alertsList.innerHTML = features.map((feature, index) => {
         const props = feature.properties || {};
         const expires = props.expires ? formatAlertTime(props.expires) : "No expiration listed";
+        const alertClass = alertCategoryClass(props.event);
         return `
-          <button class="alert-button" type="button" data-alert-index="${index}">
+          <button class="alert-button ${alertClass}" type="button" data-alert-index="${index}">
             <span class="alert-title">
               <span><span class="alert-icon" aria-hidden="true"><span>!</span></span>${escapeHtml(props.event || "NWS Alert")}</span>
               <span>${escapeHtml(props.severity || "Alert")}</span>
@@ -2373,6 +2416,15 @@
       alertsList.querySelectorAll("[data-alert-index]").forEach((button) => {
         button.addEventListener("click", () => showAlert(features[Number(button.dataset.alertIndex)]));
       });
+    }
+
+    function alertCategoryClass(eventName) {
+      const event = String(eventName || "").toLowerCase();
+      if (event.includes("warning")) return "alert-warning";
+      if (event.includes("watch")) return "alert-watch";
+      if (event.includes("advisory")) return "alert-advisory";
+      if (event.includes("statement")) return "alert-statement";
+      return "";
     }
 
     function showAlert(feature) {
