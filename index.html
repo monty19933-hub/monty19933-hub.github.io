@@ -672,6 +672,11 @@
       <button type="button" data-location="97070" aria-pressed="false">97070 Wilsonville</button>
     </nav>
 
+    <nav class="location-toggle model-toggle" aria-label="Forecast model source">
+      <button type="button" data-model-mode="nbm" aria-pressed="true">NBM</button>
+      <button type="button" data-model-mode="blend" aria-pressed="false">HRRR/NAM/GFS/NBM Blend</button>
+    </nav>
+
     <section class="alerts" aria-labelledby="alertsTitle">
       <div class="alerts__bar">
         <h2 id="alertsTitle"><span class="alert-icon" aria-hidden="true"><span>!</span></span>NWS Watches and Warnings</h2>
@@ -686,7 +691,7 @@
     <section class="forecast-grid" id="forecastGrid" aria-live="polite"></section>
 
     <footer>
-      <p class="source-note">Forecast cards use Open-Meteo's NOAA/NCEP NBM model feed only. The NWS feed is used only for active watches, warnings, advisories, and statements.</p>
+      <p class="source-note">Forecast cards use computer model guidance from Open-Meteo. The NBM mode uses NOAA/NCEP NBM only; the blend mode combines HRRR/GFS, NAM, GFS, and NBM model data. The NWS feed is used only for active watches, warnings, advisories, and statements.</p>
       <p class="source-note icon-credit">Icons use the local 98-06 TWC icon pack you provided, with motion added only for rain, snow, thunderstorm, and wind states.</p>
       <p class="source-note">
         Sources:
@@ -741,40 +746,63 @@
     let point = locations[0];
     let forecastUrl = "";
     let alertsUrl = "";
+    let modelMode = "nbm";
 
-    function buildForecastUrl(location) {
+    const modelModes = {
+      nbm: {
+        label: "NOAA/NCEP NBM",
+        subtitle: (location) => `NOAA/NCEP NBM computer model guidance for ${location.name}.`,
+        loading: "NBM model data"
+      },
+      blend: {
+        label: "HRRR/NAM/GFS/NBM Blend",
+        subtitle: (location) => `Blended HRRR/NAM/GFS/NBM computer model guidance for ${location.name}.`,
+        loading: "HRRR/NAM/GFS/NBM blend data"
+      }
+    };
+
+    const dailyVariables = [
+      "weather_code",
+      "temperature_2m_max",
+      "temperature_2m_min",
+      "precipitation_probability_max",
+      "rain_sum",
+      "snowfall_sum",
+      "precipitation_sum"
+    ];
+
+    const hourlyVariables = [
+      "rain_probability",
+      "snowfall_probability",
+      "thunderstorm_probability",
+      "weather_code",
+      "cloud_cover",
+      "temperature_2m",
+      "wind_speed_10m",
+      "wind_gusts_10m",
+      "is_day"
+    ];
+
+    function buildForecastUrl(location, options = {}) {
+      const {
+        model = "ncep_nbm_conus",
+        endpoint = "forecast",
+        forecastDays = "7"
+      } = options;
       const forecastParams = new URLSearchParams({
         latitude: location.latitude,
         longitude: location.longitude,
         timezone: location.timezone,
-        forecast_days: "7",
-        models: "ncep_nbm_conus",
+        forecast_days: forecastDays,
+        models: model,
         temperature_unit: "fahrenheit",
         precipitation_unit: "inch",
         wind_speed_unit: "mph",
-        daily: [
-          "weather_code",
-          "temperature_2m_max",
-          "temperature_2m_min",
-          "precipitation_probability_max",
-          "rain_sum",
-          "snowfall_sum",
-          "precipitation_sum"
-        ].join(","),
-        hourly: [
-          "rain_probability",
-          "snowfall_probability",
-          "thunderstorm_probability",
-          "weather_code",
-          "cloud_cover",
-          "temperature_2m",
-          "wind_speed_10m",
-          "wind_gusts_10m",
-          "is_day"
-        ].join(",")
+        daily: dailyVariables.join(","),
+        hourly: hourlyVariables.join(",")
       });
 
-      return `https://api.open-meteo.com/v1/forecast?${forecastParams.toString()}`;
+      return `https://api.open-meteo.com/v1/${endpoint}?${forecastParams.toString()}`;
     }
 
     function buildAlertsUrl(location) {
@@ -796,6 +824,14 @@
       button.addEventListener("click", () => {
         const next = locations.find((location) => location.zip === button.dataset.location);
         if (next && next.zip !== point.zip) setLocation(next);
+      });
+    });
+    document.querySelectorAll("[data-model-mode]").forEach((button) => {
+      button.addEventListener("click", () => {
+        if (button.dataset.modelMode && button.dataset.modelMode !== modelMode) {
+          modelMode = button.dataset.modelMode;
+          setLocation(point);
+        }
       });
     });
 
@@ -1070,7 +1106,7 @@
         minute: "2-digit",
         timeZoneName: "short",
         timeZone: point.timezone
-      }).format(new Date())}`;
+      }).format(new Date())} | ${data.modelLabel || modelModes[modelMode].label}`;
     }
 
     function renderAlerts(data) {
@@ -1157,25 +1193,149 @@
       return response.json();
     }
 
+    function buildBlendSources(location) {
+      return [
+        {
+          key: "hrrrGfs",
+          label: "HRRR/GFS",
+          url: buildForecastUrl(location, { model: "gfs_hrrr", endpoint: "gfs" })
+        },
+        {
+          key: "nam",
+          label: "NAM",
+          url: buildForecastUrl(location, { model: "ncep_nam_conus", endpoint: "gfs", forecastDays: "3" })
+        },
+        {
+          key: "gfs",
+          label: "GFS",
+          url: buildForecastUrl(location, { model: "gfs_seamless", endpoint: "gfs" })
+        },
+        {
+          key: "nbm",
+          label: "NBM",
+          url: buildForecastUrl(location, { model: "ncep_nbm_conus", endpoint: "gfs" })
+        }
+      ];
+    }
+
+    async function fetchBlendForecast(location) {
+      const sourceDefs = buildBlendSources(location);
+      const settled = await Promise.allSettled(
+        sourceDefs.map(async (source) => ({
+          ...source,
+          data: await fetchJson(source.url)
+        }))
+      );
+      const sources = settled
+        .filter((result) => result.status === "fulfilled")
+        .map((result) => result.value);
+
+      if (!sources.length) {
+        throw new Error("No blend model sources loaded");
+      }
+
+      return blendForecasts(sources);
+    }
+
+    function prepareSource(source) {
+      return {
+        ...source,
+        hourlyMaps: mapVariables(source.data.hourly, hourlyVariables),
+        dailyMaps: mapVariables(source.data.daily, dailyVariables)
+      };
+    }
+
+    function mapVariables(container = {}, variables = []) {
+      const times = container.time || [];
+      const maps = {};
+      variables.forEach((key) => {
+        const values = container[key] || [];
+        maps[key] = new Map(times.map((time, index) => [time, values[index]]));
+      });
+      return maps;
+    }
+
+    function blendForecasts(rawSources) {
+      const sources = rawSources.map(prepareSource);
+      const baseSource = sources.find((source) => source.key === "nbm") || sources[0];
+      const blended = JSON.parse(JSON.stringify(baseSource.data));
+      const hourlyTimes = blended.hourly?.time || [];
+      const dailyTimes = blended.daily?.time || [];
+
+      hourlyVariables.forEach((key) => {
+        if (key === "is_day") return;
+        blended.hourly[key] = hourlyTimes.map((time, index) => {
+          const values = valuesForBlend(sources, "hourly", key, time, index);
+          if (key === "weather_code") return blendWeatherCode(values, blended.hourly[key]?.[index]);
+          return blendAverage(values, blended.hourly[key]?.[index]);
+        });
+      });
+
+      dailyVariables.forEach((key) => {
+        blended.daily[key] = dailyTimes.map((time, index) => {
+          const values = valuesForBlend(sources, "daily", key, time, index);
+          if (key === "weather_code") return blendWeatherCode(values, blended.daily[key]?.[index]);
+          return blendAverage(values, blended.daily[key]?.[index]);
+        });
+      });
+
+      blended.modelLabel = modelModes.blend.label;
+      return blended;
+    }
+
+    function valuesForBlend(sources, scope, key, time, index) {
+      const preferredKeys = scope === "hourly" && index < 60 || scope === "daily" && index < 3
+        ? ["hrrrGfs", "nam", "gfs", "nbm"]
+        : ["gfs", "nbm"];
+
+      return preferredKeys
+        .map((sourceKey) => sources.find((source) => source.key === sourceKey))
+        .filter(Boolean)
+        .map((source) => Number(source[`${scope}Maps`]?.[key]?.get(time)))
+        .filter(Number.isFinite);
+    }
+
+    function blendAverage(values, fallback) {
+      if (!values.length) return fallback;
+      return values.reduce((sum, value) => sum + value, 0) / values.length;
+    }
+
+    function blendWeatherCode(values, fallback) {
+      if (!values.length) return fallback;
+      const counts = new Map();
+      values.forEach((value) => {
+        const code = Number(value);
+        if (Number.isFinite(code)) counts.set(code, (counts.get(code) || 0) + 1);
+      });
+      if (!counts.size) return fallback;
+      return [...counts.entries()]
+        .sort((a, b) => b[1] - a[1] || severeRank(b[0]) - severeRank(a[0]))[0][0];
+    }
+
     let loadToken = 0;
 
     function setLocation(location) {
       point = location;
       forecastUrl = buildForecastUrl(location);
       alertsUrl = buildAlertsUrl(location);
+      const modeConfig = modelModes[modelMode] || modelModes.nbm;
 
       document.querySelector("#forecastTitle").textContent = `${location.zip} Seven Day Forecast`;
-      document.querySelector("#forecastSubtitle").textContent = `NOAA/NCEP NBM computer model guidance for ${location.name}.`;
+      document.querySelector("#forecastSubtitle").textContent = modeConfig.subtitle(location);
       document.querySelector("#modelLink").href = forecastUrl;
+      document.querySelector("#modelLink").textContent = modelMode === "blend" ? "NBM source JSON" : "model JSON";
       document.querySelector("#alertsLink").href = alertsUrl;
       document.querySelectorAll("[data-location]").forEach((button) => {
         button.setAttribute("aria-pressed", String(button.dataset.location === location.zip));
+      });
+      document.querySelectorAll("[data-model-mode]").forEach((button) => {
+        button.setAttribute("aria-pressed", String(button.dataset.modelMode === modelMode));
       });
 
       grid.innerHTML = "";
       status.className = "loading";
       status.hidden = false;
-      status.textContent = `Loading 7 days of model data for ${location.zip}...`;
+      status.textContent = `Loading 7 days of ${modeConfig.loading} for ${location.zip}...`;
       alertCount.textContent = "Checking...";
       alertsList.innerHTML = `<div class="source-note">Loading active NWS alerts for ${location.zip}.</div>`;
       document.querySelector("#updatedStamp").textContent = "Fetching model data";
@@ -1187,8 +1347,11 @@
       const token = ++loadToken;
 
       try {
+        const forecastPromise = modelMode === "blend"
+          ? fetchBlendForecast(point)
+          : fetchJson(forecastUrl).then((data) => ({ ...data, modelLabel: modelModes.nbm.label }));
         const [forecast, alerts] = await Promise.all([
-          fetchJson(forecastUrl),
+          forecastPromise,
           fetchJson(alertsUrl, { headers: { Accept: "application/geo+json" } })
         ]);
 
@@ -1197,9 +1360,9 @@
         renderAlerts(alerts);
       } catch (error) {
         if (token !== loadToken) return;
-        const fallback = embeddedForecastData[point.zip];
+        const fallback = modelMode === "nbm" ? embeddedForecastData[point.zip] : null;
         if (fallback?.forecast && fallback?.alerts) {
-          renderForecast(fallback.forecast);
+          renderForecast({ ...fallback.forecast, modelLabel: modelModes.nbm.label });
           renderAlerts(fallback.alerts);
           document.querySelector("#updatedStamp").textContent = `Snapshot ${fallback.generatedAt || "embedded"}`;
           return;
