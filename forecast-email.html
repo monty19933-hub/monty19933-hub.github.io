@@ -697,7 +697,7 @@
     </nav>
 
     <nav class="location-toggle model-toggle" aria-label="Forecast model source">
-      <button type="button" data-model-mode="blend" aria-pressed="true">HRRR/NAM/GFS/NBM Blend</button>
+      <button type="button" data-model-mode="blend" aria-pressed="true">HRRR/NAM + NBM</button>
       <button type="button" data-model-mode="nbm" aria-pressed="false">NBM</button>
     </nav>
 
@@ -715,7 +715,7 @@
     <section class="forecast-grid" id="forecastGrid" aria-live="polite"></section>
 
     <footer>
-      <p class="source-note">Forecast cards use computer model guidance from Open-Meteo. The NBM mode uses NOAA/NCEP NBM only; the blend mode combines HRRR/GFS, NAM, GFS, and NBM model data. The NWS feed is used only for active watches, warnings, advisories, and statements.</p>
+      <p class="source-note">Forecast cards use computer model guidance from Open-Meteo. The NBM mode uses NOAA/NCEP NBM only; the blend mode uses HRRR/GFS, NAM, and NBM for days 1-2, then NBM only for days 3-7. The NWS feed is used only for active watches, warnings, advisories, and statements.</p>
       <p class="source-note">Severe Chance is a model-derived proxy from thunderstorm probability, CAPE, wind gusts, and rain amount; it is not an official severe weather outlook.</p>
       <p class="source-note icon-credit">Icons use the local 98-06 TWC icon pack you provided, with motion added only for rain, snow, thunderstorm, and wind states.</p>
       <p class="source-note">
@@ -788,9 +788,9 @@
         loading: "NBM model data"
       },
       blend: {
-        label: "HRRR/NAM/GFS/NBM Blend",
-        subtitle: (location) => `Blended HRRR/NAM/GFS/NBM computer model guidance for ${location.name}.`,
-        loading: "HRRR/NAM/GFS/NBM blend data"
+        label: "HRRR/NAM + NBM",
+        subtitle: (location) => `Short-range HRRR/NAM blend with NBM extended guidance for ${location.name}.`,
+        loading: "HRRR/NAM plus NBM model data"
       }
     };
 
@@ -1063,14 +1063,19 @@
       const fallbackTemp = isDaytime
         ? data.daily.temperature_2m_max[dailyIndex]
         : data.daily.temperature_2m_min[dailyIndex];
-      const code = dominantWeatherCode(data.hourly, indices, data.daily.weather_code[dailyIndex]);
       const windSpeed = numericMaxForIndices(data.hourly, "wind_speed_10m", indices);
       const windGust = numericMaxForIndices(data.hourly, "wind_gusts_10m", indices);
       const cape = numericMaxForIndices(data.hourly, "cape", indices);
       const rainAmount = sumForIndices(data.hourly, "rain", indices);
       const snowAmount = sumForIndices(data.hourly, "snowfall", indices);
-      const weather = weatherFor(code, period, { windSpeed, windGust });
       const thunder = maxForIndices(data.hourly, "thunderstorm_probability", indices);
+      const rain = maxForIndices(data.hourly, "rain_probability", indices);
+      const snow = maxForIndices(data.hourly, "snowfall_probability", indices);
+      const code = representativeWeatherCode(
+        dominantWeatherCode(data.hourly, indices, data.daily.weather_code[dailyIndex]),
+        { thunder, rain, snow, rainAmount, snowAmount }
+      );
+      const weather = weatherFor(code, period, { windSpeed, windGust });
 
       return {
         period,
@@ -1078,9 +1083,9 @@
         tempLabel: isDaytime ? "High" : "Low",
         temp: periodTemperature(data.hourly, indices, isDaytime, fallbackTemp),
         weather,
-        rain: maxForIndices(data.hourly, "rain_probability", indices),
+        rain,
         rainAmount,
-        snow: maxForIndices(data.hourly, "snowfall_probability", indices),
+        snow,
         snowAmount,
         thunder,
         severe: severeChance(thunder, cape, windGust, rainAmount),
@@ -1088,6 +1093,20 @@
         windGust,
         cape
       };
+    }
+
+    function representativeWeatherCode(baseCode, metrics) {
+      const thunder = clampPercent(metrics.thunder);
+      const rain = clampPercent(metrics.rain);
+      const snow = clampPercent(metrics.snow);
+      const rainAmount = Number(metrics.rainAmount) || 0;
+      const snowAmount = Number(metrics.snowAmount) || 0;
+
+      if (thunder >= 15) return thunder >= 35 ? 96 : 95;
+      if (snow >= 20 || snowAmount >= 0.1) return snowAmount >= 1 ? 75 : 71;
+      if (rain >= 55 || rainAmount >= 0.35) return 63;
+      if (rain >= 20 || rainAmount >= 0.04) return 61;
+      return baseCode;
     }
 
     function severeChance(thunder, cape, windGust, rainAmount) {
@@ -1282,11 +1301,6 @@
           url: buildForecastUrl(location, { model: "ncep_nam_conus", endpoint: "gfs", forecastDays: "3" })
         },
         {
-          key: "gfs",
-          label: "GFS",
-          url: buildForecastUrl(location, { model: "gfs_seamless", endpoint: "gfs" })
-        },
-        {
           key: "nbm",
           label: "NBM",
           url: buildForecastUrl(location, { model: "ncep_nbm_conus", endpoint: "gfs" })
@@ -1360,14 +1374,16 @@
     }
 
     function valuesForBlend(sources, scope, key, time, index) {
-      const preferredKeys = scope === "hourly" && index < 60 || scope === "daily" && index < 3
-        ? ["hrrrGfs", "nam", "gfs", "nbm"]
-        : ["gfs", "nbm"];
+      const preferredKeys = scope === "hourly" && index < 48 || scope === "daily" && index < 2
+        ? ["hrrrGfs", "nam", "nbm"]
+        : ["nbm"];
 
       return preferredKeys
         .map((sourceKey) => sources.find((source) => source.key === sourceKey))
         .filter(Boolean)
-        .map((source) => Number(source[`${scope}Maps`]?.[key]?.get(time)))
+        .map((source) => source[`${scope}Maps`]?.[key]?.get(time))
+        .filter((value) => value !== null && value !== undefined && value !== "")
+        .map(Number)
         .filter(Number.isFinite);
     }
 
