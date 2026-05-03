@@ -365,14 +365,16 @@
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 12px;
       min-width: 0;
+      align-items: stretch;
     }
 
     .period {
       display: grid;
-      grid-template-rows: auto 112px auto auto auto auto;
+      grid-template-rows: auto 112px minmax(44px, auto) auto auto 1fr;
       gap: 10px;
       min-width: 0;
-      align-content: start;
+      align-content: stretch;
+      height: 100%;
     }
 
     .period + .period {
@@ -812,7 +814,8 @@
     .probabilities {
       display: grid;
       gap: 10px;
-      align-self: start;
+      align-self: stretch;
+      align-content: start;
       min-width: 0;
     }
 
@@ -1286,7 +1289,7 @@
       }
 
       .period {
-        grid-template-rows: auto 104px auto auto auto auto;
+        grid-template-rows: auto 104px minmax(44px, auto) auto auto 1fr;
       }
 
       .period + .period {
