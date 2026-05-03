@@ -1201,6 +1201,12 @@
       border-color: rgba(147, 64, 0, 0.5);
     }
 
+    .detail.alert-severity.severity-statement {
+      --detail-alert-bg: #D6B588;
+      color: var(--ink);
+      border-color: rgba(126, 91, 50, 0.42);
+    }
+
     .detail.alert-severity.severity-severe {
       --detail-alert-bg: #C91B00;
       color: #fff;
@@ -2674,6 +2680,7 @@
     function alertSeverityClass(severity) {
       const value = String(severity || "").toLowerCase();
       if (value === "moderate") return "severity-moderate";
+      if (value === "statement") return "severity-statement";
       if (value === "severe") return "severity-severe";
       return "";
     }
