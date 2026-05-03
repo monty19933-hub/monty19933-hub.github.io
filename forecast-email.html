@@ -1986,7 +1986,7 @@
       const thundersnow = isThundersnow(match.kind, metrics);
       const label = thundersnow ? "Thundersnow" : (period === "day" && match.label === "Clear" ? "Sunny" : match.label);
       const windy = Number(metrics.windSpeed) >= 20 || Number(metrics.windGust) >= 30;
-      const severeStorm = match.kind === "storm" && (Number(code) >= 96 || clampPercent(metrics.severe) >= 8);
+      const severeStorm = match.kind === "storm" && isSevereStorm(code, metrics);
       const intensityClass = precipitationIntensityClass(thundersnow ? "thundersnow" : match.kind, code, metrics);
       const motionClass = stormyKinds.has(match.kind)
         ? "stormy"
@@ -2024,6 +2024,10 @@
       return kind === "storm" && clampPercent(metrics.snow) > 25;
     }
 
+    function isSevereStorm(code, metrics = {}) {
+      return Number(code) >= 96 || clampPercent(metrics.severe) > 10;
+    }
+
     function rainIntensityClass(metrics = {}) {
       const amount = Number(metrics.rainAmount) || 0;
       const chance = clampPercent(metrics.rain);
@@ -2053,7 +2057,7 @@
     function iconFileFor(kind, period, code, windy, metrics = {}) {
       const isNight = period === "night";
       const numericCode = Number(code);
-      const severeStorm = numericCode >= 96 || clampPercent(metrics.severe) >= 8;
+      const severeStorm = isSevereStorm(numericCode, metrics);
       const thundersnow = isThundersnow(kind, metrics);
 
       if (kind === "storm") {
@@ -2301,7 +2305,7 @@
       const interval = alertIntervalForPeriod(data.hourly, isoDate, isDaytime);
       const code = representativeWeatherCode(
         dominantWeatherCode(data.hourly, indices, data.daily.weather_code[dailyIndex]),
-        { thunder, rain, snow, rainAmount, snowAmount }
+        { thunder, rain, snow, rainAmount, snowAmount, severe }
       );
       const weather = weatherFor(code, period, { windSpeed, windGust, rain, rainAmount, snow, snowAmount, thunder, severe });
 
@@ -2343,7 +2347,7 @@
       const severe = severeChance(thunder, cape, windGust, rainAmount);
       const code = representativeWeatherCode(
         Number(hourly.weather_code?.[index]),
-        { thunder, rain, snow, rainAmount, snowAmount }
+        { thunder, rain, snow, rainAmount, snowAmount, severe }
       );
       const weather = weatherFor(code, period, { windSpeed, windGust, rain, rainAmount, snow, snowAmount, thunder, severe });
 
@@ -2371,12 +2375,13 @@
 
     function representativeWeatherCode(baseCode, metrics) {
       const thunder = clampPercent(metrics.thunder);
+      const severe = clampPercent(metrics.severe);
       const rain = clampPercent(metrics.rain);
       const snow = clampPercent(metrics.snow);
       const rainAmount = Number(metrics.rainAmount) || 0;
       const snowAmount = Number(metrics.snowAmount) || 0;
 
-      if (thunder >= 15) return thunder >= 35 ? 96 : 95;
+      if (thunder >= 15) return severe > 10 ? 96 : 95;
       if (isIceCode(baseCode) && (rain >= 15 || snow >= 15 || rainAmount >= 0.02 || snowAmount >= 0.02)) return baseCode;
       if (snow >= 20 || snowAmount >= 0.1) return snowAmount >= 1 ? 75 : 71;
       if (rain >= 55 || rainAmount >= 0.35) return 63;
@@ -2454,13 +2459,14 @@
 
     function conditionText(summary) {
       if (summary.weather.kind === "storm") {
-        const severeText = summary.code >= 96 || summary.severe >= 8;
+        const severeText = isSevereStorm(summary.code, summary);
+        const thunderstormText = summary.thunder > 35;
         if (summary.weather.thundersnow) {
-          if (severeText) return summary.thunder >= 50 ? "Severe Thundersnow" : "Chance of Severe Thundersnow";
-          return summary.thunder >= 50 ? "Thundersnow" : "Chance of Thundersnow";
+          if (severeText) return "Severe Thundersnow";
+          return thunderstormText ? "Thundersnow" : "Chance of Thundersnow";
         }
-        if (severeText) return summary.thunder >= 50 ? "Severe Thunderstorms" : "Chance of Severe Thunderstorms";
-        return summary.thunder >= 50 ? "Thunderstorms" : "Chance of Thunderstorms";
+        if (severeText) return "Severe Thunderstorms";
+        return thunderstormText ? "Thunderstorms" : "Chance of Thunderstorms";
       }
       if (summary.weather.kind === "ice") {
         const iceChance = Math.max(summary.rain, summary.snow);
