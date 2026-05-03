@@ -356,11 +356,13 @@
       pointer-events: none;
       --rain-a: 36px;
       --rain-b: 50px;
+      --rain-x1: -8px;
+      --rain-x2: 5px;
       background-image:
         radial-gradient(ellipse at 50% 45%, rgba(34, 111, 185, 0.95) 0 2.4px, transparent 3px),
         radial-gradient(ellipse at 50% 45%, rgba(64, 143, 205, 0.78) 0 1.8px, transparent 2.5px);
       background-size: 30px var(--rain-a), 44px var(--rain-b);
-      background-position: 0 0, 13px 9px;
+      background-position: var(--rain-x1) 0, var(--rain-x2) 9px;
       animation: rain-drops 1.35s linear infinite;
     }
 
@@ -397,11 +399,13 @@
       pointer-events: none;
       --snow-a: 72px;
       --snow-b: 96px;
+      --snow-x1: -10px;
+      --snow-x2: 6px;
       background-image:
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cg fill='none' stroke='%236a9fc7' stroke-width='2.3' stroke-linecap='round'%3E%3Cpath d='M32 22v20M24 26l16 12M40 26L24 38M27 23l5 5 5-5M27 41l5-5 5 5'/%3E%3C/g%3E%3C/svg%3E"),
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cg fill='none' stroke='%23ffffff' stroke-width='2.1' stroke-linecap='round'%3E%3Cpath d='M32 24v16M26 28l12 8M38 28L26 36'/%3E%3C/g%3E%3C/svg%3E");
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cg fill='none' stroke='%236a9fc7' stroke-width='2.1' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M32 19v26M21 25l22 14M43 25L21 39M26 20l6 6 6-6M26 44l6-6 6 6M20 30l8-2-2-8M44 30l-8-2 2-8M20 34l8 2-2 8M44 34l-8 2 2 8'/%3E%3C/g%3E%3C/svg%3E"),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cg fill='none' stroke='%23ffffff' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M32 22v20M24 27l16 10M40 27L24 37M28 23l4 4 4-4M28 41l4-4 4 4'/%3E%3C/g%3E%3C/svg%3E");
       background-size: 56px var(--snow-a), 74px var(--snow-b);
-      background-position: 0 0, 18px 12px;
+      background-position: var(--snow-x1) 0, var(--snow-x2) 12px;
       animation: snow-fall 5.2s linear infinite;
     }
 
@@ -439,11 +443,13 @@
       pointer-events: none;
       --ice-a: 28px;
       --ice-b: 39px;
+      --ice-x1: -8px;
+      --ice-x2: 5px;
       background-image:
         radial-gradient(circle, rgba(172, 210, 231, 0.95) 0 2.1px, transparent 2.8px),
         radial-gradient(circle, rgba(245, 252, 255, 0.95) 0 1.4px, transparent 2.1px);
       background-size: 24px var(--ice-a), 34px var(--ice-b);
-      background-position: 0 0, 13px 9px;
+      background-position: var(--ice-x1) 0, var(--ice-x2) 9px;
       animation: ice-fall 1.65s linear infinite;
     }
 
@@ -657,18 +663,18 @@
     }
 
     @keyframes rain-drops {
-      from { background-position: 0 0, 13px 9px; }
-      to { background-position: 0 var(--rain-a), 13px calc(9px + var(--rain-b)); }
+      from { background-position: var(--rain-x1) 0, var(--rain-x2) 9px; }
+      to { background-position: var(--rain-x1) var(--rain-a), var(--rain-x2) calc(9px + var(--rain-b)); }
     }
 
     @keyframes snow-fall {
-      from { background-position: 0 0, 18px 12px; }
-      to { background-position: 0 var(--snow-a), 18px calc(12px + var(--snow-b)); }
+      from { background-position: var(--snow-x1) 0, var(--snow-x2) 12px; }
+      to { background-position: var(--snow-x1) var(--snow-a), var(--snow-x2) calc(12px + var(--snow-b)); }
     }
 
     @keyframes ice-fall {
-      from { background-position: 0 0, 13px 9px; }
-      to { background-position: 0 var(--ice-a), 13px calc(9px + var(--ice-b)); }
+      from { background-position: var(--ice-x1) 0, var(--ice-x2) 9px; }
+      to { background-position: var(--ice-x1) var(--ice-a), var(--ice-x2) calc(9px + var(--ice-b)); }
     }
 
     @keyframes storm-flash {
