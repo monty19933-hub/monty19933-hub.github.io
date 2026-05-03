@@ -931,13 +931,6 @@
       <button type="button" data-location="97067" aria-pressed="false">97067 Welches, OR</button>
       <button type="button" data-location="97070" aria-pressed="false">97070 Wilsonville, OR</button>
       <button type="button" data-location="97206" aria-pressed="false">97206 Creston, OR</button>
-      <button type="button" data-location="75080" aria-pressed="false">75080 Richardson, TX</button>
-      <button type="button" data-location="80310" aria-pressed="false">80310 Boulder, CO</button>
-    </nav>
-
-    <nav class="location-toggle model-toggle" aria-label="Forecast model source">
-      <button type="button" data-model-mode="blend" aria-pressed="true">HRRR/NAM + NBM</button>
-      <button type="button" data-model-mode="nbm" aria-pressed="false">NBM</button>
     </nav>
 
     <section class="alerts" aria-labelledby="alertsTitle">
@@ -954,7 +947,7 @@
     <section class="forecast-grid" id="forecastGrid" aria-live="polite"></section>
 
     <footer>
-      <p class="source-note">Forecast cards use computer model guidance from Open-Meteo. The NBM mode uses NOAA/NCEP NBM only; the blend mode uses HRRR/GFS, NAM, and NBM for days 1-2, then NBM only for days 3-9. The NWS feed is used only for active watches, warnings, advisories, and statements.</p>
+      <p class="source-note">Forecast cards use computer model guidance from Open-Meteo. The forecast uses HRRR/GFS, NAM, and NBM for days 1-2, then NBM only for days 3-9. The NWS feed is used only for active watches, warnings, advisories, and statements.</p>
       <p class="source-note">Potential record high/low coloring compares the forecast temperature against Open-Meteo historical reanalysis daily extremes from 1991 through last year for the same point location and calendar date.</p>
       <p class="source-note">Severe Chance is a model-derived proxy from thunderstorm probability, CAPE, wind gusts, and rain amount; it is not an official severe weather outlook.</p>
       <p class="source-note icon-credit">Icons use the local 98-06 TWC icon pack you provided, with motion added only for rain, snow, thunderstorm, and wind states.</p>
@@ -1014,38 +1007,14 @@
         latitude: 45.4930,
         longitude: -122.6200,
         timezone: "America/Los_Angeles"
-      },
-      {
-        zip: "75080",
-        city: "Richardson",
-        name: "Richardson, TX",
-        latitude: 32.9677,
-        longitude: -96.7388,
-        timezone: "America/Chicago"
-      },
-      {
-        zip: "80310",
-        city: "Boulder",
-        name: "Boulder, CO",
-        latitude: 40.00465,
-        longitude: -105.26254,
-        timezone: "America/Denver"
       }
     ];
 
     let point = locations[0];
     let forecastUrl = "";
     let alertsUrl = "";
-    let modelMode = "blend";
 
     const modelModes = {
-      nbm: {
-        label: "NOAA/NCEP NBM",
-        subtitle: (location) => location.modelSet === "gfs"
-          ? `GFS computer model guidance for ${location.name}.`
-          : `NOAA/NCEP NBM computer model guidance for ${location.name}.`,
-        loading: (location) => location.modelSet === "gfs" ? "GFS model data" : "NBM model data"
-      },
       blend: {
         label: "HRRR/NAM + NBM",
         subtitle: (location) => location.modelSet === "gfs"
@@ -1142,14 +1111,6 @@
       button.addEventListener("click", () => {
         const next = locations.find((location) => location.zip === button.dataset.location);
         if (next && next.zip !== point.zip) setLocation(next);
-      });
-    });
-    document.querySelectorAll("[data-model-mode]").forEach((button) => {
-      button.addEventListener("click", () => {
-        if (button.dataset.modelMode && button.dataset.modelMode !== modelMode) {
-          modelMode = button.dataset.modelMode;
-          setLocation(point);
-        }
       });
     });
 
@@ -1621,7 +1582,7 @@
         minute: "2-digit",
         timeZoneName: "short",
         timeZone: point.timezone
-      }).format(new Date())} | ${data.modelLabel || modelModes[modelMode].label}`;
+      }).format(new Date())} | ${data.modelLabel || modelModes.blend.label}`;
     }
 
     function renderAlerts(data) {
@@ -1893,7 +1854,7 @@
       point = location;
       forecastUrl = buildForecastUrl(location);
       alertsUrl = buildAlertsUrl(location);
-      const modeConfig = modelModes[modelMode] || modelModes.nbm;
+      const modeConfig = modelModes.blend;
       const loadingLabel = typeof modeConfig.loading === "function" ? modeConfig.loading(location) : modeConfig.loading;
 
       document.querySelector("#forecastTitle").textContent = `${location.zip} Nine Day Forecast`;
@@ -1901,13 +1862,10 @@
       document.querySelector("#modelLink").href = forecastUrl;
       document.querySelector("#modelLink").textContent = location.modelSet === "gfs"
         ? "GFS source JSON"
-        : modelMode === "blend" ? "NBM source JSON" : "model JSON";
+        : "NBM source JSON";
       document.querySelector("#alertsLink").href = alertsUrl;
       document.querySelectorAll("[data-location]").forEach((button) => {
         button.setAttribute("aria-pressed", String(button.dataset.location === location.zip));
-      });
-      document.querySelectorAll("[data-model-mode]").forEach((button) => {
-        button.setAttribute("aria-pressed", String(button.dataset.modelMode === modelMode));
       });
 
       grid.innerHTML = "";
@@ -1925,9 +1883,7 @@
       const token = ++loadToken;
 
       try {
-        const forecastPromise = modelMode === "blend"
-          ? fetchBlendForecast(point)
-          : fetchJson(forecastUrl).then((data) => ({ ...data, modelLabel: point.modelSet === "gfs" ? "GFS" : modelModes.nbm.label }));
+        const forecastPromise = fetchBlendForecast(point);
         const forecast = await forecastPromise;
         const [recordExtremes, alerts] = await Promise.all([
           fetchRecordExtremes(point, forecast).catch(() => ({})),
@@ -1939,13 +1895,6 @@
         renderAlerts(alerts);
       } catch (error) {
         if (token !== loadToken) return;
-        const fallback = modelMode === "nbm" ? embeddedForecastData[point.zip] : null;
-        if (fallback?.forecast && fallback?.alerts) {
-          renderForecast({ ...fallback.forecast, modelLabel: modelModes.nbm.label });
-          renderAlerts(fallback.alerts);
-          document.querySelector("#updatedStamp").textContent = `Snapshot ${fallback.generatedAt || "embedded"}`;
-          return;
-        }
         status.className = "error";
         status.textContent = `Unable to load live data: ${error.message}`;
         alertCount.textContent = "Unavailable";
