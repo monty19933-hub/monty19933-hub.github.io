@@ -208,12 +208,12 @@
 
     .forecast-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(285px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
       gap: 12px;
     }
 
     .day-card {
-      min-height: 510px;
+      min-height: 560px;
       display: grid;
       grid-template-rows: auto 1fr;
       gap: 12px;
@@ -255,9 +255,10 @@
 
     .period {
       display: grid;
-      grid-template-rows: auto 112px auto auto 1fr;
+      grid-template-rows: auto 112px auto auto auto;
       gap: 10px;
       min-width: 0;
+      align-content: start;
     }
 
     .period + .period {
@@ -344,17 +345,16 @@
       animation: sun-icon-pulse 2.6s ease-in-out infinite;
     }
 
-    .icon-wrap.rainy::after,
-    .icon-wrap.stormy::after {
+    .icon-wrap.rainy::after {
       content: "";
       position: absolute;
-      left: 25%;
-      top: 45%;
-      width: 50%;
-      height: 52%;
+      left: 29%;
+      top: 48%;
+      width: 42%;
+      height: 48%;
       z-index: 3;
       opacity: 0.72;
-      clip-path: polygon(14% 0, 86% 0, 100% 100%, 0 100%);
+      clip-path: polygon(8% 0, 92% 0, 100% 100%, 0 100%);
       background-image:
         linear-gradient(180deg, rgba(42, 117, 185, 0.95) 0 62%, transparent 62%),
         linear-gradient(180deg, rgba(42, 117, 185, 0.75) 0 58%, transparent 58%);
@@ -388,9 +388,10 @@
     }
 
     .condition {
-      min-height: 38px;
+      min-height: 44px;
       font-weight: 750;
       line-height: 1.2;
+      overflow-wrap: anywhere;
     }
 
     .temp {
@@ -418,7 +419,8 @@
     .probabilities {
       display: grid;
       gap: 10px;
-      align-self: end;
+      align-self: start;
+      min-width: 0;
     }
 
     .prob {
@@ -435,6 +437,7 @@
       display: flex;
       justify-content: space-between;
       gap: 8px;
+      flex-wrap: wrap;
       color: var(--muted);
       font-size: 0.86rem;
     }
@@ -442,6 +445,20 @@
     .prob-head strong {
       color: #243441;
       white-space: nowrap;
+    }
+
+    .music-panel {
+      margin: 14px 0 0;
+      display: grid;
+      gap: 7px;
+      max-width: 420px;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .music-panel audio {
+      width: 100%;
+      height: 34px;
     }
 
     .prob.severe .prob-head {
@@ -661,7 +678,7 @@
       }
 
       .period {
-        grid-template-rows: auto 96px auto auto 1fr;
+        grid-template-rows: auto 104px auto auto auto;
       }
 
       .period + .period {
@@ -675,6 +692,19 @@
 
       .detail-grid {
         grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .periods {
+        grid-template-columns: 1fr;
+      }
+
+      .period + .period {
+        border-left: 0;
+        border-top: 1px solid var(--line);
+        padding-left: 0;
+        padding-top: 14px;
       }
     }
   </style>
@@ -698,7 +728,7 @@
       <button type="button" data-location="97067" aria-pressed="false">97067 Welches</button>
       <button type="button" data-location="97070" aria-pressed="false">97070 Wilsonville</button>
       <button type="button" data-location="75080" aria-pressed="false">75080 Richardson</button>
-      <button type="button" data-location="99639" aria-pressed="false">99639 Ninilchik</button>
+      <button type="button" data-location="80310" aria-pressed="false">80310 Boulder</button>
     </nav>
 
     <nav class="location-toggle model-toggle" aria-label="Forecast model source">
@@ -719,8 +749,13 @@
     <section id="status" class="loading">Loading 7 days of model data...</section>
     <section class="forecast-grid" id="forecastGrid" aria-live="polite"></section>
 
+    <section class="music-panel" aria-label="Background music">
+      <span>Local Forecast background music</span>
+      <audio controls autoplay loop preload="metadata" src="assets/audio/local-forecast-nighttime.mp3"></audio>
+    </section>
+
     <footer>
-      <p class="source-note">Forecast cards use computer model guidance from Open-Meteo. The NBM mode uses NOAA/NCEP NBM only; the blend mode uses HRRR/GFS, NAM, and NBM for days 1-2, then NBM only for days 3-7. Alaska locations use GFS because the NBM/HRRR/NAM feeds used here do not cover that point. The NWS feed is used only for active watches, warnings, advisories, and statements.</p>
+      <p class="source-note">Forecast cards use computer model guidance from Open-Meteo. The NBM mode uses NOAA/NCEP NBM only; the blend mode uses HRRR/GFS, NAM, and NBM for days 1-2, then NBM only for days 3-7. The NWS feed is used only for active watches, warnings, advisories, and statements.</p>
       <p class="source-note">Severe Chance is a model-derived proxy from thunderstorm probability, CAPE, wind gusts, and rain amount; it is not an official severe weather outlook.</p>
       <p class="source-note icon-credit">Icons use the local 98-06 TWC icon pack you provided, with motion added only for rain, snow, thunderstorm, and wind states.</p>
       <p class="source-note">
@@ -780,13 +815,12 @@
         timezone: "America/Chicago"
       },
       {
-        zip: "99639",
-        city: "Ninilchik",
-        name: "Ninilchik, AK",
-        latitude: 60.0312,
-        longitude: -151.4264,
-        timezone: "America/Anchorage",
-        modelSet: "gfs"
+        zip: "80310",
+        city: "Boulder",
+        name: "Boulder, CO",
+        latitude: 40.00465,
+        longitude: -105.26254,
+        timezone: "America/Denver"
       }
     ];
 
