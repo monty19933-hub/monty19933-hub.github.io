@@ -1132,15 +1132,25 @@
     }
 
     .detail.alert-severity {
-      --alert-severity-text: var(--alert);
+      background: #fbfcfc;
     }
 
-    .detail.alert-severity .value {
-      color: var(--alert-severity-text);
+    .detail.alert-severity.alert-statement {
+      background: #EED9C4;
+      border-color: rgba(128, 89, 54, 0.34);
+    }
+
+    .detail.alert-severity.alert-advisory {
+      background: #FFEF00;
+      border-color: rgba(156, 138, 0, 0.38);
+    }
+
+    .detail.alert-severity.alert-watch {
+      background: #FFA500;
+      border-color: rgba(157, 95, 0, 0.42);
     }
 
     .detail.alert-severity.alert-warning {
-      --alert-severity-text: #fff;
       color: #fff;
       background: #E73121;
       border-color: rgba(131, 18, 10, 0.5);
@@ -1330,6 +1340,7 @@
 
   <script>
     const favoriteStorageKey = "modelForecastFavorites.v1";
+    const recordStorageKey = "modelForecastRecords.v1";
     const stateAbbreviations = {
       Alabama: "AL", Alaska: "AK", Arizona: "AZ", Arkansas: "AR", California: "CA", Colorado: "CO", Connecticut: "CT", Delaware: "DE", Florida: "FL", Georgia: "GA", Hawaii: "HI", Idaho: "ID", Illinois: "IL", Indiana: "IN", Iowa: "IA", Kansas: "KS", Kentucky: "KY", Louisiana: "LA", Maine: "ME", Maryland: "MD", Massachusetts: "MA", Michigan: "MI", Minnesota: "MN", Mississippi: "MS", Missouri: "MO", Montana: "MT", Nebraska: "NE", Nevada: "NV", "New Hampshire": "NH", "New Jersey": "NJ", "New Mexico": "NM", "New York": "NY", "North Carolina": "NC", "North Dakota": "ND", Ohio: "OH", Oklahoma: "OK", Oregon: "OR", Pennsylvania: "PA", "Rhode Island": "RI", "South Carolina": "SC", "South Dakota": "SD", Tennessee: "TN", Texas: "TX", Utah: "UT", Vermont: "VT", Virginia: "VA", Washington: "WA", "West Virginia": "WV", Wisconsin: "WI", Wyoming: "WY", "District of Columbia": "DC"
     };
@@ -2552,7 +2563,44 @@
         if (!Number.isFinite(records[isoDate].low)) delete records[isoDate].low;
       });
 
+      writeRecordCache(location, forecast, records);
       return records;
+    }
+
+    function readRecordCache(location, forecast) {
+      try {
+        const cache = JSON.parse(localStorage.getItem(recordStorageKey) || "{}");
+        const records = cache[recordCacheKey(location)];
+        if (!records || typeof records !== "object") return {};
+        return filterRecordsForForecast(records, forecast);
+      } catch {
+        return {};
+      }
+    }
+
+    function writeRecordCache(location, forecast, records) {
+      try {
+        const cache = JSON.parse(localStorage.getItem(recordStorageKey) || "{}");
+        cache[recordCacheKey(location)] = filterRecordsForForecast(records, forecast);
+        localStorage.setItem(recordStorageKey, JSON.stringify(cache));
+      } catch {
+        // Record badges are optional; the forecast still works if storage is blocked.
+      }
+    }
+
+    function filterRecordsForForecast(records, forecast) {
+      const forecastDays = forecast?.daily?.time || [];
+      return forecastDays.reduce((filtered, isoDate) => {
+        if (records?.[isoDate]) filtered[isoDate] = records[isoDate];
+        return filtered;
+      }, {});
+    }
+
+    function recordCacheKey(location) {
+      const currentYear = new Date().getFullYear();
+      const latitude = Number(location.latitude).toFixed(3);
+      const longitude = Number(location.longitude).toFixed(3);
+      return `${latitude},${longitude},${location.timezone || "auto"},${currentYear - 1}`;
     }
 
     function monthDayKey(isoDate) {
@@ -2753,7 +2801,7 @@
         const forecast = await forecastPromise;
         if (forecast.timezone) point.timezone = forecast.timezone;
         const [recordExtremes, alerts] = await Promise.all([
-          fetchRecordExtremes(point, forecast).catch(() => ({})),
+          fetchRecordExtremes(point, forecast).catch(() => readRecordCache(point, forecast)),
           fetchJson(alertsUrl, { headers: { Accept: "application/geo+json" } }).catch(() => emptyAlerts())
         ]);
 
