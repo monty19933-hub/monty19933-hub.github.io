@@ -2669,21 +2669,33 @@
     }
 
     function temperatureColor(value) {
-      if (!Number.isFinite(value)) return "#4b0082";
+      if (!Number.isFinite(value)) return "#7b2cff";
       const ranges = [
-        { min: -150, max: 0, from: "#d9c2ff", to: "#4b0082" },
-        { min: 1, max: 35, from: "#bdefff", to: "#0057b8" },
-        { min: 36, max: 55, from: "#bff7c1", to: "#16833a" },
-        { min: 56, max: 75, from: "#fff7a3", to: "#d6a400" },
-        { min: 76, max: 85, from: "#ffd29a", to: "#e56a00" },
-        { min: 86, max: 99, from: "#9c120d", to: "#ff7a70" },
-        { min: 100, max: 150, from: "#b0006d", to: "#ff9ad5" }
+        { min: -150, max: 0, from: "#d9c2ff", mid: "#7b2cff", to: "#5045cf" },
+        { min: 1, max: 35, from: "#91c9ff", mid: "#1479ff", to: "#1e9fcf" },
+        { min: 36, max: 55, from: "#4bcfa1", mid: "#18a64a", to: "#a5c83a" },
+        { min: 56, max: 75, from: "#d7dd52", mid: "#f2d324", to: "#f2a62b" },
+        { min: 76, max: 85, from: "#f4b440", mid: "#f97316", to: "#df4b18" },
+        { min: 86, max: 99, from: "#b91c1c", mid: "#ef4444", to: "#f36484" },
+        { min: 100, max: 150, from: "#be176f", mid: "#ec4899", to: "#ff9ad5" }
       ];
       const clamped = Math.max(-150, Math.min(150, value));
       const range = ranges.find((candidate) => clamped >= candidate.min && clamped <= candidate.max)
         || (clamped < 1 ? ranges[0] : ranges[ranges.length - 1]);
       const ratio = range.max === range.min ? 1 : (clamped - range.min) / (range.max - range.min);
-      return interpolateColor(range.from, range.to, ratio);
+      return interpolateBandColor(range, ratio);
+    }
+
+    function interpolateBandColor(range, ratio) {
+      const eased = smoothstep(Math.max(0, Math.min(1, ratio)));
+      if (eased <= 0.5) {
+        return interpolateColor(range.from, range.mid, eased * 2);
+      }
+      return interpolateColor(range.mid, range.to, (eased - 0.5) * 2);
+    }
+
+    function smoothstep(value) {
+      return value * value * (3 - 2 * value);
     }
 
     function interpolateColor(from, to, ratio) {
