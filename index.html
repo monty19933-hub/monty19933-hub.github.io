@@ -1235,7 +1235,8 @@
       border-color: rgba(119, 19, 5, 0.58);
     }
 
-    .detail.alert-certainty.certainty-probable {
+    .detail.alert-certainty.certainty-probable,
+    .detail.alert-certainty.certainty-possible {
       --detail-alert-bg: #FFEF00;
       color: var(--ink);
       border-color: rgba(156, 138, 0, 0.38);
@@ -2720,6 +2721,7 @@
     function alertCertaintyClass(certainty) {
       const value = String(certainty || "").toLowerCase();
       if (value === "probable") return "certainty-probable";
+      if (value === "possible") return "certainty-possible";
       if (value === "likely") return "certainty-likely";
       return "";
     }
