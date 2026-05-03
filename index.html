@@ -422,11 +422,26 @@
       gap: 5px;
     }
 
+    .prob.severe {
+      margin-top: -4px;
+      padding-left: 10px;
+    }
+
     .prob-head {
       display: flex;
       justify-content: space-between;
+      gap: 8px;
       color: var(--muted);
       font-size: 0.86rem;
+    }
+
+    .prob-head strong {
+      color: #243441;
+      white-space: nowrap;
+    }
+
+    .prob.severe .prob-head {
+      font-size: 0.74rem;
     }
 
     .track {
@@ -434,6 +449,10 @@
       border-radius: 99px;
       background: #e8eef2;
       overflow: hidden;
+    }
+
+    .prob.severe .track {
+      height: 5px;
     }
 
     .fill {
@@ -449,6 +468,10 @@
 
     .fill.storm {
       background: var(--storm);
+    }
+
+    .fill.severe {
+      background: #c23b22;
     }
 
     .loading,
@@ -670,7 +693,7 @@
       <button type="button" data-location="97223" aria-pressed="true">97223 Tigard</button>
       <button type="button" data-location="97067" aria-pressed="false">97067 Welches</button>
       <button type="button" data-location="97070" aria-pressed="false">97070 Wilsonville</button>
-      <button type="button" data-location="miami-fl" aria-pressed="false">Miami, FL</button>
+      <button type="button" data-location="75080" aria-pressed="false">75080 Richardson</button>
     </nav>
 
     <nav class="location-toggle model-toggle" aria-label="Forecast model source">
@@ -693,6 +716,7 @@
 
     <footer>
       <p class="source-note">Forecast cards use computer model guidance from Open-Meteo. The NBM mode uses NOAA/NCEP NBM only; the blend mode combines HRRR/GFS, NAM, GFS, and NBM model data. The NWS feed is used only for active watches, warnings, advisories, and statements.</p>
+      <p class="source-note">Severe Chance is a model-derived proxy from thunderstorm probability, CAPE, wind gusts, and rain amount; it is not an official severe weather outlook.</p>
       <p class="source-note icon-credit">Icons use the local 98-06 TWC icon pack you provided, with motion added only for rain, snow, thunderstorm, and wind states.</p>
       <p class="source-note">
         Sources:
@@ -743,12 +767,12 @@
         timezone: "America/Los_Angeles"
       },
       {
-        zip: "miami-fl",
-        city: "Miami",
-        name: "Miami, FL",
-        latitude: 25.7617,
-        longitude: -80.1918,
-        timezone: "America/New_York"
+        zip: "75080",
+        city: "Richardson",
+        name: "Richardson, TX",
+        latitude: 32.9677,
+        longitude: -96.7388,
+        timezone: "America/Chicago"
       }
     ];
 
@@ -784,6 +808,9 @@
       "rain_probability",
       "snowfall_probability",
       "thunderstorm_probability",
+      "rain",
+      "snowfall",
+      "cape",
       "weather_code",
       "cloud_cover",
       "temperature_2m",
@@ -988,6 +1015,14 @@
       return max;
     }
 
+    function sumForIndices(hourly, key, indices) {
+      const values = hourly[key] || [];
+      return indices.reduce((sum, index) => {
+        const value = Number(values[index]);
+        return Number.isFinite(value) ? sum + value : sum;
+      }, 0);
+    }
+
     function periodTemperature(hourly, indices, isDaytime, fallback) {
       const temperatures = hourly.temperature_2m || [];
       const values = indices
@@ -1031,7 +1066,11 @@
       const code = dominantWeatherCode(data.hourly, indices, data.daily.weather_code[dailyIndex]);
       const windSpeed = numericMaxForIndices(data.hourly, "wind_speed_10m", indices);
       const windGust = numericMaxForIndices(data.hourly, "wind_gusts_10m", indices);
+      const cape = numericMaxForIndices(data.hourly, "cape", indices);
+      const rainAmount = sumForIndices(data.hourly, "rain", indices);
+      const snowAmount = sumForIndices(data.hourly, "snowfall", indices);
       const weather = weatherFor(code, period, { windSpeed, windGust });
+      const thunder = maxForIndices(data.hourly, "thunderstorm_probability", indices);
 
       return {
         period,
@@ -1040,18 +1079,45 @@
         temp: periodTemperature(data.hourly, indices, isDaytime, fallbackTemp),
         weather,
         rain: maxForIndices(data.hourly, "rain_probability", indices),
+        rainAmount,
         snow: maxForIndices(data.hourly, "snowfall_probability", indices),
-        thunder: maxForIndices(data.hourly, "thunderstorm_probability", indices),
+        snowAmount,
+        thunder,
+        severe: severeChance(thunder, cape, windGust, rainAmount),
         windSpeed,
-        windGust
+        windGust,
+        cape
       };
     }
 
-    function probabilityRow(name, value, type) {
+    function severeChance(thunder, cape, windGust, rainAmount) {
+      const thunderChance = clampPercent(thunder);
+      if (!thunderChance) return 0;
+
+      let multiplier = 0.18;
+      if (cape >= 3000) multiplier += 0.34;
+      else if (cape >= 2000) multiplier += 0.26;
+      else if (cape >= 1000) multiplier += 0.15;
+      else if (cape >= 500) multiplier += 0.07;
+
+      if (windGust >= 58) multiplier += 0.22;
+      else if (windGust >= 45) multiplier += 0.14;
+      else if (windGust >= 35) multiplier += 0.07;
+
+      if (rainAmount >= 0.5) multiplier += 0.08;
+      return clampPercent(Math.min(thunderChance, thunderChance * Math.min(multiplier, 0.85)));
+    }
+
+    function formatAmount(value) {
+      if (!Number.isFinite(value) || value <= 0.004) return "0.00 in";
+      return `${value.toFixed(value < 0.1 ? 2 : 2)} in`;
+    }
+
+    function probabilityRow(name, value, type, amount = "") {
       const pct = clampPercent(value);
       return `
-        <div class="prob">
-          <div class="prob-head"><span>${name}</span><strong>${pct}%</strong></div>
+        <div class="prob ${type === "severe" ? "severe" : ""}">
+          <div class="prob-head"><span>${name}</span><strong>${pct}%${amount ? ` | ${escapeHtml(amount)}` : ""}</strong></div>
           <div class="track"><div class="fill ${type}" style="--pct: ${pct}%"></div></div>
         </div>
       `;
@@ -1073,9 +1139,10 @@
             <span class="value">${roundTemp(summary.temp)}</span>
           </div>
           <div class="probabilities">
-            ${probabilityRow("Rain", summary.rain, "rain")}
-            ${probabilityRow("Snow", summary.snow, "snow")}
+            ${probabilityRow("Rain", summary.rain, "rain", formatAmount(summary.rainAmount))}
+            ${probabilityRow("Snow", summary.snow, "snow", formatAmount(summary.snowAmount))}
             ${probabilityRow("Thunder", summary.thunder, "storm")}
+            ${probabilityRow("Severe Chance", summary.severe, "severe")}
           </div>
         </section>
       `;
