@@ -963,6 +963,10 @@
       line-height: 1;
     }
 
+    .temp .value {
+      color: var(--temp-color, currentColor);
+    }
+
     .record-note {
       display: block;
       margin-top: 5px;
@@ -2809,7 +2813,7 @@
             <img class="weather-icon-img" src="${escapeAttribute(summary.weather.iconUrl)}" alt="${escapeAttribute(summary.weather.label)}">
           </div>
           <div class="condition">${escapeHtml(conditionText(summary))}</div>
-          <div class="temp${tempRecordClass(summary)}"${tempRecordTitle(summary)}>
+          <div class="temp${tempRecordClass(summary)}" style="--temp-color: ${temperatureColor(summary.temp)}"${tempRecordTitle(summary)}>
             <span class="label">${summary.tempLabel} Temp</span>
             <span class="value">${roundTemp(summary.temp)}</span>
             ${tempRecordNote(summary)}
