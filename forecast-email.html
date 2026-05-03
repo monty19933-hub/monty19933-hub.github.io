@@ -2152,6 +2152,25 @@
         : { start: `${fallbackIsoDate}T18:00`, end: addHoursToLocalIso(`${fallbackIsoDate}T23:00`, 7) };
     }
 
+    function alertIntervalForPeriod(hourly, isoDate, isDaytime) {
+      const times = hourly.time || [];
+      const dayFlags = hourly.is_day || [];
+      const dateIndices = [];
+      const dayIndices = [];
+
+      for (let index = 0; index < times.length; index += 1) {
+        if (!String(times[index]).startsWith(isoDate)) continue;
+        dateIndices.push(index);
+        if (Number(dayFlags[index]) === 1) dayIndices.push(index);
+      }
+
+      if (isDaytime) return intervalForIndices(hourly, dayIndices, isoDate, true);
+
+      const lastDayIndex = dayIndices.length ? dayIndices[dayIndices.length - 1] : -1;
+      const eveningIndices = dateIndices.filter((index) => Number(dayFlags[index]) === 0 && index > lastDayIndex);
+      return intervalForIndices(hourly, eveningIndices, isoDate, false);
+    }
+
     function addHoursToLocalIso(value, hours) {
       const date = new Date(`${value}:00`);
       if (Number.isNaN(date.getTime())) return value;
@@ -2200,7 +2219,7 @@
       const rain = maxForIndices(data.hourly, "rain_probability", indices);
       const snow = maxForIndices(data.hourly, "snowfall_probability", indices);
       const severe = severeChance(thunder, cape, windGust, rainAmount);
-      const interval = intervalForIndices(data.hourly, indices, isoDate, isDaytime);
+      const interval = alertIntervalForPeriod(data.hourly, isoDate, isDaytime);
       const code = representativeWeatherCode(
         dominantWeatherCode(data.hourly, indices, data.daily.weather_code[dailyIndex]),
         { thunder, rain, snow, rainAmount, snowAmount }
@@ -2629,7 +2648,7 @@
       if (event.includes("warning")) return "alert-warning";
       if (event.includes("watch")) return "alert-watch";
       if (event.includes("advisory")) return "alert-advisory";
-      if (event.includes("statement")) return "alert-statement";
+      if (event.includes("statement") || event.includes("outlook")) return "alert-statement";
       return "";
     }
 
@@ -2701,6 +2720,7 @@
       ]);
       const collections = [pointAlerts];
       const zones = nwsZoneIds(pointMetadata);
+      const cwa = pointMetadata?.properties?.cwa || "";
 
       if (zones.length) {
         const zoneAlerts = await Promise.all(zones.map((zone) => (
@@ -2709,7 +2729,50 @@
         collections.push(...zoneAlerts);
       }
 
+      const outlook = await fetchLatestNwsProductFeature(cwa, "HWO", "Hazardous Weather Outlook");
+      if (outlook) collections.push({ type: "FeatureCollection", features: [outlook] });
+
       return { type: "FeatureCollection", features: dedupeAlerts(collections) };
+    }
+
+    async function fetchLatestNwsProductFeature(cwa, type, event) {
+      if (!cwa) return null;
+      const list = await fetchJson(`https://api.weather.gov/products/types/${encodeURIComponent(type)}/locations/${encodeURIComponent(cwa)}`).catch(() => null);
+      const latest = (list?.["@graph"] || [])[0];
+      if (!latest?.id || !isRecentNwsProduct(latest.issuanceTime)) return null;
+      const product = await fetchJson(`https://api.weather.gov/products/${encodeURIComponent(latest.id)}`).catch(() => null);
+      const issued = product?.issuanceTime || latest.issuanceTime || new Date().toISOString();
+      const expires = addHoursToIsoInstant(issued, 24);
+      return {
+        id: `nws-product-${type}-${latest.id}`,
+        type: "Feature",
+        properties: {
+          id: `nws-product-${type}-${latest.id}`,
+          event,
+          severity: "Statement",
+          certainty: "Possible",
+          effective: issued,
+          expires,
+          ends: expires,
+          headline: `${event} issued by NWS ${cwa}`,
+          description: product?.productText || `${event} text is available from NWS ${cwa}.`,
+          instruction: "",
+          "@id": `https://api.weather.gov/products/${latest.id}`
+        }
+      };
+    }
+
+    function isRecentNwsProduct(value) {
+      const issued = new Date(value);
+      if (Number.isNaN(issued.getTime())) return false;
+      return Date.now() - issued.getTime() <= 36 * 60 * 60 * 1000;
+    }
+
+    function addHoursToIsoInstant(value, hours) {
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return value;
+      date.setHours(date.getHours() + hours);
+      return date.toISOString();
     }
 
     function nwsZoneIds(pointMetadata) {
