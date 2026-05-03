@@ -536,6 +536,25 @@
       animation: snow-fall 5.2s linear infinite;
     }
 
+    .icon-wrap.stormy.thundersnow::after {
+      content: "";
+      position: absolute;
+      inset: -20px 0 0;
+      z-index: 1;
+      opacity: 0.4;
+      pointer-events: none;
+      --snow-a: 72px;
+      --snow-b: 96px;
+      --snow-x1: -10px;
+      --snow-x2: 6px;
+      background-image:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cg fill='none' stroke='%236a9fc7' stroke-width='2.1' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M32 19v26M21 25l22 14M43 25L21 39M26 20l6 6 6-6M26 44l6-6 6 6M20 30l8-2-2-8M44 30l-8-2 2-8M20 34l8 2-2 8M44 34l-8 2 2 8'/%3E%3C/g%3E%3C/svg%3E"),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cg fill='none' stroke='%23ffffff' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M32 22v20M24 27l16 10M40 27L24 37M28 23l4 4 4-4M28 41l4-4 4 4'/%3E%3C/g%3E%3C/svg%3E");
+      background-size: 56px var(--snow-a), 74px var(--snow-b);
+      background-position: var(--snow-x1) 0, var(--snow-x2) 12px;
+      animation: snow-fall 5.2s linear infinite;
+    }
+
     .icon-wrap.snow-flurries::after,
     .icon-wrap.snow-chance::after {
       opacity: 0.22;
@@ -1963,10 +1982,11 @@
 
     function weatherFor(code, period, metrics = {}) {
       const match = weatherMap.find((entry) => entry.codes.includes(Number(code))) || { label: "Variable", kind: "cloudy" };
-      const label = period === "day" && match.label === "Clear" ? "Sunny" : match.label;
+      const thundersnow = isThundersnow(match.kind, metrics);
+      const label = thundersnow ? "Thundersnow" : (period === "day" && match.label === "Clear" ? "Sunny" : match.label);
       const windy = Number(metrics.windSpeed) >= 20 || Number(metrics.windGust) >= 30;
       const severeStorm = match.kind === "storm" && (Number(code) >= 96 || clampPercent(metrics.severe) >= 8);
-      const intensityClass = precipitationIntensityClass(match.kind, code, metrics);
+      const intensityClass = precipitationIntensityClass(thundersnow ? "thundersnow" : match.kind, code, metrics);
       const motionClass = stormyKinds.has(match.kind)
         ? "stormy"
         : rainyKinds.has(match.kind)
@@ -1986,15 +2006,21 @@
         period,
         iconFile,
         iconUrl: iconData[iconFile] || `${iconBase}${iconFile}`,
-        iconClass: `${match.kind} ${motionClass}${severeStorm ? " severe-storm" : ""}${intensityClass ? ` ${intensityClass}` : ""}${windy ? " windy" : ""}`
+        thundersnow,
+        iconClass: `${match.kind} ${motionClass}${thundersnow ? " thundersnow" : ""}${severeStorm ? " severe-storm" : ""}${intensityClass ? ` ${intensityClass}` : ""}${windy ? " windy" : ""}`
       };
     }
 
     function precipitationIntensityClass(kind, code, metrics = {}) {
+      if (kind === "thundersnow") return snowIntensityClass(code, metrics);
       if (kind === "storm" || kind === "rain") return rainIntensityClass(metrics);
       if (kind === "snow") return snowIntensityClass(code, metrics);
       if (kind === "ice") return iceIntensityClass(metrics);
       return "";
+    }
+
+    function isThundersnow(kind, metrics = {}) {
+      return kind === "storm" && clampPercent(metrics.snow) > 25;
     }
 
     function rainIntensityClass(metrics = {}) {
@@ -2424,6 +2450,10 @@
     function conditionText(summary) {
       if (summary.weather.kind === "storm") {
         const severeText = summary.code >= 96 || summary.severe >= 8;
+        if (summary.weather.thundersnow) {
+          if (severeText) return summary.thunder >= 50 ? "Severe Thundersnow" : "Chance of Severe Thundersnow";
+          return summary.thunder >= 50 ? "Thundersnow" : "Chance of Thundersnow";
+        }
         if (severeText) return summary.thunder >= 50 ? "Severe Thunderstorms" : "Chance of Severe Thunderstorms";
         return summary.thunder >= 50 ? "Thunderstorms" : "Chance of Thunderstorms";
       }
@@ -2796,6 +2826,7 @@
       const collections = [pointAlerts];
       const zones = nwsZoneIds(pointMetadata);
       const cwa = pointMetadata?.properties?.cwa || "";
+      const state = locationStateCode(location);
 
       if (zones.length) {
         const zoneAlerts = await Promise.all(zones.map((zone) => (
@@ -2804,43 +2835,107 @@
         collections.push(...zoneAlerts);
       }
 
-      const outlook = await fetchLatestNwsProductFeature(cwa, "HWO", "Hazardous Weather Outlook");
-      if (outlook) collections.push({ type: "FeatureCollection", features: [outlook] });
+      if (state) {
+        const stateAlerts = await fetchJson(`https://api.weather.gov/alerts/active?area=${encodeURIComponent(state)}`, { headers }).catch(() => emptyAlerts());
+        const floodFeatures = filterPointFloodAlerts(stateAlerts, location);
+        if (floodFeatures.length) collections.push({ type: "FeatureCollection", features: floodFeatures });
+      }
+
+      const productAlerts = await Promise.all([
+        fetchRecentNwsProductFeatures(cwa, "HWO", "Hazardous Weather Outlook", { severity: "Statement", certainty: "Possible", maxAgeHours: 36, durationHours: 24, limit: 1 }),
+        fetchRecentNwsProductFeatures(cwa, "FLW", "Flood Warning", { severity: "Severe", certainty: "Likely", maxAgeHours: 24, durationHours: 24, limit: 6 }),
+        fetchRecentNwsProductFeatures(cwa, "FFW", "Flash Flood Warning", { severity: "Severe", certainty: "Likely", maxAgeHours: 12, durationHours: 12, limit: 6 }),
+        fetchRecentNwsProductFeatures(cwa, "FLS", "Flood Statement", { severity: "Statement", certainty: "Possible", maxAgeHours: 24, durationHours: 24, limit: 6 })
+      ]);
+      productAlerts.flat().filter(Boolean).forEach((feature) => {
+        collections.push({ type: "FeatureCollection", features: [feature] });
+      });
 
       return { type: "FeatureCollection", features: dedupeAlerts(collections) };
     }
 
-    async function fetchLatestNwsProductFeature(cwa, type, event) {
-      if (!cwa) return null;
-      const list = await fetchJson(`https://api.weather.gov/products/types/${encodeURIComponent(type)}/locations/${encodeURIComponent(cwa)}`).catch(() => null);
-      const latest = (list?.["@graph"] || [])[0];
-      if (!latest?.id || !isRecentNwsProduct(latest.issuanceTime)) return null;
-      const product = await fetchJson(`https://api.weather.gov/products/${encodeURIComponent(latest.id)}`).catch(() => null);
-      const issued = product?.issuanceTime || latest.issuanceTime || new Date().toISOString();
-      const expires = addHoursToIsoInstant(issued, 24);
-      return {
-        id: `nws-product-${type}-${latest.id}`,
-        type: "Feature",
-        properties: {
-          id: `nws-product-${type}-${latest.id}`,
-          event,
-          severity: "Statement",
-          certainty: "Possible",
-          effective: issued,
-          expires,
-          ends: expires,
-          headline: `${event} issued by NWS ${cwa}`,
-          description: product?.productText || `${event} text is available from NWS ${cwa}.`,
-          instruction: "",
-          "@id": `https://api.weather.gov/products/${latest.id}`
-        }
-      };
+    function locationStateCode(location) {
+      if (location?.countryCode && location.countryCode !== "US") return "";
+      const value = String(location?.state || location?.name || "").trim();
+      const match = value.match(/,\s*([A-Z]{2})(?:\s|$)/);
+      return match ? match[1] : "";
     }
 
-    function isRecentNwsProduct(value) {
+    function filterPointFloodAlerts(collection, location) {
+      const lat = Number(location.latitude);
+      const lon = Number(location.longitude);
+      if (!Number.isFinite(lat) || !Number.isFinite(lon)) return [];
+      return alertFeatures(collection).filter((feature) => {
+        const event = String(feature?.properties?.event || "");
+        return /flood/i.test(event) && geometryContainsPoint(feature.geometry, lon, lat);
+      });
+    }
+
+    function geometryContainsPoint(geometry, lon, lat) {
+      if (!geometry) return false;
+      if (geometry.type === "Polygon") return polygonContainsPoint(geometry.coordinates, lon, lat);
+      if (geometry.type === "MultiPolygon") return geometry.coordinates.some((polygon) => polygonContainsPoint(polygon, lon, lat));
+      return false;
+    }
+
+    function polygonContainsPoint(rings, lon, lat) {
+      if (!Array.isArray(rings) || !rings.length) return false;
+      const insideOuter = ringContainsPoint(rings[0], lon, lat);
+      if (!insideOuter) return false;
+      return !rings.slice(1).some((ring) => ringContainsPoint(ring, lon, lat));
+    }
+
+    function ringContainsPoint(ring, lon, lat) {
+      if (!Array.isArray(ring)) return false;
+      let inside = false;
+      for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+        const xi = Number(ring[i]?.[0]);
+        const yi = Number(ring[i]?.[1]);
+        const xj = Number(ring[j]?.[0]);
+        const yj = Number(ring[j]?.[1]);
+        if (![xi, yi, xj, yj].every(Number.isFinite)) continue;
+        const intersects = ((yi > lat) !== (yj > lat)) && (lon < ((xj - xi) * (lat - yi)) / (yj - yi) + xi);
+        if (intersects) inside = !inside;
+      }
+      return inside;
+    }
+
+    async function fetchRecentNwsProductFeatures(cwa, type, event, options = {}) {
+      if (!cwa) return null;
+      const list = await fetchJson(`https://api.weather.gov/products/types/${encodeURIComponent(type)}/locations/${encodeURIComponent(cwa)}`).catch(() => null);
+      const products = (list?.["@graph"] || [])
+        .filter((item) => item?.id && isRecentNwsProduct(item.issuanceTime, options.maxAgeHours))
+        .slice(0, options.limit || 1);
+
+      const features = await Promise.all(products.map(async (item) => {
+        const product = await fetchJson(`https://api.weather.gov/products/${encodeURIComponent(item.id)}`).catch(() => null);
+        const issued = product?.issuanceTime || item.issuanceTime || new Date().toISOString();
+        const expires = addHoursToIsoInstant(issued, options.durationHours || 24);
+        return {
+          id: `nws-product-${type}-${item.id}`,
+          type: "Feature",
+          properties: {
+            id: `nws-product-${type}-${item.id}`,
+            event,
+            severity: options.severity || "Statement",
+            certainty: options.certainty || "Possible",
+            effective: issued,
+            expires,
+            ends: expires,
+            headline: `${event} issued by NWS ${cwa}`,
+            description: product?.productText || `${event} text is available from NWS ${cwa}.`,
+            instruction: "",
+            "@id": `https://api.weather.gov/products/${item.id}`
+          }
+        };
+      }));
+      return features;
+    }
+
+    function isRecentNwsProduct(value, maxAgeHours = 36) {
       const issued = new Date(value);
       if (Number.isNaN(issued.getTime())) return false;
-      return Date.now() - issued.getTime() <= 36 * 60 * 60 * 1000;
+      return Date.now() - issued.getTime() <= maxAgeHours * 60 * 60 * 1000;
     }
 
     function addHoursToIsoInstant(value, hours) {
