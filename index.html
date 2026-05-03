@@ -85,7 +85,8 @@
       align-items: center;
     }
 
-    .location-toggle button {
+    .location-toggle button,
+    .location-tools button {
       border: 1px solid var(--line);
       border-radius: 6px;
       background: rgba(255, 255, 255, 0.74);
@@ -96,15 +97,93 @@
     }
 
     .location-toggle button:hover,
-    .location-toggle button:focus-visible {
+    .location-toggle button:focus-visible,
+    .location-tools button:hover,
+    .location-tools button:focus-visible {
       border-color: #1f7a64;
       outline: none;
     }
 
-    .location-toggle button[aria-pressed="true"] {
+    .location-toggle .location-choice[aria-pressed="true"] {
       color: #fff;
       background: #1f7a64;
       border-color: #1f7a64;
+    }
+
+    .favorite-chip,
+    .search-result {
+      display: inline-flex;
+      align-items: stretch;
+      min-width: 0;
+    }
+
+    .favorite-chip .location-choice,
+    .search-result .search-choice {
+      border-top-right-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+
+    .favorite-chip .pin-toggle,
+    .search-result .pin-toggle {
+      min-width: 40px;
+      margin-left: -1px;
+      border-top-left-radius: 0;
+      border-bottom-left-radius: 0;
+      padding-inline: 10px;
+    }
+
+    .pin-toggle[aria-pressed="true"] {
+      color: #7b4f00;
+      background: #fff3bf;
+      border-color: #e3bd42;
+    }
+
+    .location-tools {
+      margin: 10px 0 0;
+      display: grid;
+      gap: 8px;
+      padding: 10px;
+      border: 1px solid rgba(80, 96, 112, 0.16);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.48);
+    }
+
+    .location-search-form {
+      display: grid;
+      grid-template-columns: minmax(180px, 1fr) auto auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .location-search-form label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+    }
+
+    .location-search-form input {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 10px 12px;
+      color: var(--ink);
+      background: #fff;
+      font: inherit;
+    }
+
+    .location-search-form input:focus {
+      border-color: #1f7a64;
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(31, 122, 100, 0.12);
+    }
+
+    .search-results {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
     }
 
     .stamp strong {
@@ -278,13 +357,6 @@
       margin: 0;
       font-size: 0.95rem;
       letter-spacing: 0;
-    }
-
-    .period-title span {
-      color: var(--muted);
-      font-size: 0.74rem;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
     }
 
     .icon-wrap {
@@ -536,6 +608,14 @@
       border-color: rgba(47, 120, 183, 0.62);
       background: #e5f0ff;
       box-shadow: inset 0 0 0 1px rgba(47, 120, 183, 0.16);
+    }
+
+    .period.day .temp .label {
+      color: #b42318;
+    }
+
+    .period.night .temp .label {
+      color: #1d4ed8;
     }
 
     .label {
@@ -863,6 +943,10 @@
         justify-self: start;
       }
 
+      .location-search-form {
+        grid-template-columns: 1fr;
+      }
+
       .forecast-grid {
         grid-template-columns: 1fr;
       }
@@ -912,7 +996,7 @@
     <header class="masthead">
       <div>
         <h1 id="forecastTitle">97223 Nine Day Forecast</h1>
-        <p class="subtitle" id="forecastSubtitle">NOAA/NCEP NBM computer model guidance for Tigard, Oregon.</p>
+        <p class="subtitle" id="forecastSubtitle">Short-range HRRR/NAM blend with NBM extended guidance for Tigard, OR.</p>
       </div>
       <div class="stamp">
         <span>Today</span>
@@ -927,12 +1011,18 @@
       </div>
     </header>
 
-    <nav class="location-toggle" aria-label="Forecast location">
-      <button type="button" data-location="97223" aria-pressed="true">97223 Tigard, OR</button>
-      <button type="button" data-location="97067" aria-pressed="false">97067 Welches, OR</button>
-      <button type="button" data-location="97070" aria-pressed="false">97070 Wilsonville, OR</button>
-      <button type="button" data-location="97206" aria-pressed="false">97206 Creston, OR</button>
-    </nav>
+    <nav class="location-toggle" id="favoritesList" aria-label="Favorite forecast locations"></nav>
+
+    <section class="location-tools" aria-label="Find another forecast location">
+      <form class="location-search-form" id="locationSearchForm">
+        <label for="locationSearchInput">City or ZIP code</label>
+        <input id="locationSearchInput" type="search" autocomplete="postal-code" placeholder="Enter city or ZIP code">
+        <button type="submit">Search</button>
+        <button type="button" id="currentPinToggle" aria-pressed="true">Unpin Current</button>
+      </form>
+      <p class="source-note" id="locationSearchStatus">Pinned favorites stay on this browser unless you unpin them.</p>
+      <div class="search-results" id="locationSearchResults" aria-live="polite"></div>
+    </section>
 
     <section class="alerts" aria-labelledby="alertsTitle">
       <div class="alerts__bar">
@@ -951,12 +1041,15 @@
       <p class="source-note">Forecast cards use computer model guidance from Open-Meteo. The forecast uses HRRR/GFS, NAM, and NBM for days 1-2, then NBM only for days 3-9. The NWS feed is used only for active watches, warnings, advisories, and statements.</p>
       <p class="source-note">Potential record high/low coloring compares the forecast temperature against Open-Meteo historical reanalysis daily extremes from 1991 through last year for the same point location and calendar date.</p>
       <p class="source-note">Severe Chance is a model-derived proxy from thunderstorm probability, CAPE, wind gusts, and rain amount; it is not an official severe weather outlook.</p>
+      <p class="source-note">City and ZIP search uses geocoding only to find latitude and longitude; forecast cards still use the model guidance described above.</p>
       <p class="source-note icon-credit">Icons use the local 98-06 TWC icon pack you provided, with motion added only for rain, snow, thunderstorm, and wind states.</p>
       <p class="source-note">
         Sources:
         <a id="modelLink" href="#" target="_blank" rel="noreferrer">model JSON</a>,
         <a id="alertsLink" href="#" target="_blank" rel="noreferrer">NWS alert JSON</a>,
         <a href="https://open-meteo.com/en/docs/gfs-api" target="_blank" rel="noreferrer">Open-Meteo GFS/NBM docs</a>,
+        <a href="https://open-meteo.com/en/docs/geocoding-api" target="_blank" rel="noreferrer">Open-Meteo geocoding docs</a>,
+        <a href="https://api.zippopotam.us/" target="_blank" rel="noreferrer">ZIP geocoding</a>,
         <a href="https://open-meteo.com/en/docs/historical-weather-api" target="_blank" rel="noreferrer">Open-Meteo historical reanalysis docs</a>,
         <a href="https://www.weather.gov/documentation/services-web-alerts" target="_blank" rel="noreferrer">NWS alerts docs</a>,
         <a href="https://www.deviantart.com/malekmasoud/art/98-06-TWC-Icon-Mega-Pack-CHRISTMAS-UPDATE-1277563023" target="_blank" rel="noreferrer">local 98-06 TWC icon pack source</a>.
@@ -976,7 +1069,12 @@
   </dialog>
 
   <script>
-    const locations = [
+    const favoriteStorageKey = "modelForecastFavorites.v1";
+    const stateAbbreviations = {
+      Alabama: "AL", Alaska: "AK", Arizona: "AZ", Arkansas: "AR", California: "CA", Colorado: "CO", Connecticut: "CT", Delaware: "DE", Florida: "FL", Georgia: "GA", Hawaii: "HI", Idaho: "ID", Illinois: "IL", Indiana: "IN", Iowa: "IA", Kansas: "KS", Kentucky: "KY", Louisiana: "LA", Maine: "ME", Maryland: "MD", Massachusetts: "MA", Michigan: "MI", Minnesota: "MN", Mississippi: "MS", Missouri: "MO", Montana: "MT", Nebraska: "NE", Nevada: "NV", "New Hampshire": "NH", "New Jersey": "NJ", "New Mexico": "NM", "New York": "NY", "North Carolina": "NC", "North Dakota": "ND", Ohio: "OH", Oklahoma: "OK", Oregon: "OR", Pennsylvania: "PA", "Rhode Island": "RI", "South Carolina": "SC", "South Dakota": "SD", Tennessee: "TN", Texas: "TX", Utah: "UT", Vermont: "VT", Virginia: "VA", Washington: "WA", "West Virginia": "WV", Wisconsin: "WI", Wyoming: "WY", "District of Columbia": "DC"
+    };
+
+    const builtinLocations = [
       {
         zip: "97223",
         city: "Tigard",
@@ -1011,6 +1109,8 @@
       }
     ];
 
+    let locations = loadFavoriteLocations();
+    let searchResults = [];
     let point = locations[0];
     let forecastUrl = "";
     let alertsUrl = "";
@@ -1104,16 +1204,261 @@
     const forecastAudio = document.querySelector("#forecastAudio");
     const musicToggle = document.querySelector("#musicToggle");
     const musicVolume = document.querySelector("#musicVolume");
+    const favoritesList = document.querySelector("#favoritesList");
+    const locationSearchForm = document.querySelector("#locationSearchForm");
+    const locationSearchInput = document.querySelector("#locationSearchInput");
+    const locationSearchStatus = document.querySelector("#locationSearchStatus");
+    const locationSearchResults = document.querySelector("#locationSearchResults");
+    const currentPinToggle = document.querySelector("#currentPinToggle");
 
     document.querySelector("#todayStamp").textContent = formatFullDate(new Date());
     document.querySelector("#closeDialog").addEventListener("click", () => dialog.close());
     setupMusicControls();
-    document.querySelectorAll("[data-location]").forEach((button) => {
-      button.addEventListener("click", () => {
-        const next = locations.find((location) => location.zip === button.dataset.location);
-        if (next && next.zip !== point.zip) setLocation(next);
+    renderFavorites();
+    setupLocationControls();
+
+    function locationKey(location) {
+      if (location.zip) return `zip:${location.zip}`;
+      return `geo:${Number(location.latitude).toFixed(4)},${Number(location.longitude).toFixed(4)}`;
+    }
+
+    function locationDisplay(location) {
+      return [location.zip, location.name || location.city].filter(Boolean).join(" ");
+    }
+
+    function titleLocation(location) {
+      return location.zip || location.name || location.city || "Selected Location";
+    }
+
+    function normalizeLocation(location) {
+      const latitude = Number(location.latitude);
+      const longitude = Number(location.longitude);
+      return {
+        zip: location.zip ? String(location.zip) : "",
+        city: location.city || location.name || "Selected Location",
+        name: location.name || location.city || location.zip || "Selected Location",
+        latitude,
+        longitude,
+        timezone: location.timezone || "auto"
+      };
+    }
+
+    function loadFavoriteLocations() {
+      const fallback = builtinLocations.map((location) => normalizeLocation(location));
+      try {
+        const saved = JSON.parse(localStorage.getItem(favoriteStorageKey) || "{}");
+        const hiddenBuiltins = new Set(saved.hiddenBuiltins || []);
+        const merged = new Map();
+
+        builtinLocations.forEach((location) => {
+          const normalized = normalizeLocation(location);
+          if (!hiddenBuiltins.has(locationKey(normalized))) merged.set(locationKey(normalized), normalized);
+        });
+
+        (saved.favorites || []).forEach((location) => {
+          const normalized = normalizeLocation(location);
+          if (Number.isFinite(normalized.latitude) && Number.isFinite(normalized.longitude)) {
+            merged.set(locationKey(normalized), normalized);
+          }
+        });
+
+        return [...merged.values()].length ? [...merged.values()] : fallback;
+      } catch {
+        return fallback;
+      }
+    }
+
+    function saveFavoriteLocations() {
+      try {
+        const activeKeys = new Set(locations.map(locationKey));
+        const builtinKeys = new Set(builtinLocations.map((location) => locationKey(normalizeLocation(location))));
+        const hiddenBuiltins = builtinLocations
+          .map((location) => locationKey(normalizeLocation(location)))
+          .filter((key) => !activeKeys.has(key));
+        const favorites = locations.filter((location) => !builtinKeys.has(locationKey(location)));
+        localStorage.setItem(favoriteStorageKey, JSON.stringify({ hiddenBuiltins, favorites }));
+      } catch {
+        // Favorites are optional; the forecast still works if storage is blocked.
+      }
+    }
+
+    function isFavorite(location) {
+      const key = locationKey(location);
+      return locations.some((favorite) => locationKey(favorite) === key);
+    }
+
+    function addFavorite(location) {
+      const normalized = normalizeLocation(location);
+      const key = locationKey(normalized);
+      if (!isFavorite(normalized)) locations = [...locations, normalized];
+      saveFavoriteLocations();
+      renderFavorites();
+      renderSearchResults(searchResults);
+      updateCurrentPinToggle();
+      return locations.find((favorite) => locationKey(favorite) === key) || normalized;
+    }
+
+    function removeFavorite(location) {
+      if (locations.length <= 1 && isFavorite(location)) {
+        locationSearchStatus.textContent = "Keep at least one favorite pinned.";
+        return;
+      }
+
+      const key = locationKey(location);
+      locations = locations.filter((favorite) => locationKey(favorite) !== key);
+      saveFavoriteLocations();
+      renderFavorites();
+      renderSearchResults(searchResults);
+
+      if (locationKey(point) === key) setLocation(locations[0]);
+      else updateCurrentPinToggle();
+    }
+
+    function renderFavorites() {
+      favoritesList.innerHTML = locations.map((location) => {
+        const key = escapeAttribute(locationKey(location));
+        const label = escapeHtml(locationDisplay(location));
+        const pressed = locationKey(location) === locationKey(point);
+        return `
+          <span class="favorite-chip">
+            <button class="location-choice" type="button" data-location-id="${key}" aria-pressed="${pressed}">${label}</button>
+            <button class="pin-toggle" type="button" data-unpin-id="${key}" aria-pressed="true" aria-label="Unpin ${label}">★</button>
+          </span>
+        `;
+      }).join("");
+      updateCurrentPinToggle();
+    }
+
+    function renderSearchResults(results) {
+      if (!results.length) {
+        locationSearchResults.innerHTML = "";
+        return;
+      }
+
+      locationSearchResults.innerHTML = results.map((location, index) => {
+        const label = escapeHtml(locationDisplay(location));
+        const pinned = isFavorite(location);
+        return `
+          <span class="search-result">
+            <button class="search-choice" type="button" data-search-index="${index}">${label}</button>
+            <button class="pin-toggle" type="button" data-pin-index="${index}" aria-pressed="${pinned}" aria-label="${pinned ? "Unpin" : "Pin"} ${label}">${pinned ? "★" : "☆"}</button>
+          </span>
+        `;
+      }).join("");
+    }
+
+    function updateCurrentPinToggle() {
+      const pinned = isFavorite(point);
+      currentPinToggle.textContent = pinned ? "Unpin Current" : "Pin Current";
+      currentPinToggle.setAttribute("aria-pressed", String(pinned));
+    }
+
+    function setupLocationControls() {
+      favoritesList.addEventListener("click", (event) => {
+        const locationButton = event.target.closest("[data-location-id]");
+        const unpinButton = event.target.closest("[data-unpin-id]");
+
+        if (unpinButton) {
+          const favorite = locations.find((location) => locationKey(location) === unpinButton.dataset.unpinId);
+          if (favorite) removeFavorite(favorite);
+          return;
+        }
+
+        if (locationButton) {
+          const next = locations.find((location) => locationKey(location) === locationButton.dataset.locationId);
+          if (next && locationKey(next) !== locationKey(point)) setLocation(next);
+        }
       });
-    });
+
+      locationSearchForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const query = locationSearchInput.value.trim();
+        if (!query) return;
+
+        locationSearchStatus.textContent = `Searching for ${query}...`;
+        locationSearchResults.innerHTML = "";
+
+        try {
+          searchResults = await searchLocations(query);
+          if (!searchResults.length) {
+            locationSearchStatus.textContent = `No city or ZIP match found for ${query}.`;
+            return;
+          }
+          locationSearchStatus.textContent = `Choose a result, or use the star to pin it.`;
+          renderSearchResults(searchResults);
+        } catch (error) {
+          locationSearchStatus.textContent = `Location search failed: ${error.message}`;
+        }
+      });
+
+      locationSearchResults.addEventListener("click", (event) => {
+        const choice = event.target.closest("[data-search-index]");
+        const pin = event.target.closest("[data-pin-index]");
+
+        if (pin) {
+          const result = searchResults[Number(pin.dataset.pinIndex)];
+          if (!result) return;
+          if (isFavorite(result)) removeFavorite(result);
+          else addFavorite(result);
+          return;
+        }
+
+        if (choice) {
+          const result = searchResults[Number(choice.dataset.searchIndex)];
+          if (result) setLocation(normalizeLocation(result));
+        }
+      });
+
+      currentPinToggle.addEventListener("click", () => {
+        if (isFavorite(point)) removeFavorite(point);
+        else addFavorite(point);
+      });
+    }
+
+    async function searchLocations(query) {
+      const trimmed = query.trim();
+      if (/^\d{5}$/.test(trimmed)) {
+        try {
+          const zipResult = await fetchZipLocation(trimmed);
+          if (zipResult) return [zipResult];
+        } catch {
+          // Fall through to Open-Meteo geocoding.
+        }
+      }
+
+      const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(trimmed)}&count=6&language=en&format=json`;
+      const data = await fetchJson(url);
+      return (data.results || []).map(locationFromGeocode).filter(Boolean);
+    }
+
+    async function fetchZipLocation(zip) {
+      const data = await fetchJson(`https://api.zippopotam.us/us/${encodeURIComponent(zip)}`);
+      const place = data.places?.[0];
+      if (!place) return null;
+      const state = place["state abbreviation"] || place.state || "";
+      const city = place["place name"] || zip;
+      return normalizeLocation({
+        zip,
+        city,
+        name: `${city}${state ? `, ${state}` : ""}`,
+        latitude: place.latitude,
+        longitude: place.longitude,
+        timezone: "auto"
+      });
+    }
+
+    function locationFromGeocode(result) {
+      if (!Number.isFinite(Number(result.latitude)) || !Number.isFinite(Number(result.longitude))) return null;
+      const state = stateAbbreviations[result.admin1] || result.admin1 || result.country_code || "";
+      const city = result.name || "Selected Location";
+      return normalizeLocation({
+        city,
+        name: `${city}${state ? `, ${state}` : ""}`,
+        latitude: result.latitude,
+        longitude: result.longitude,
+        timezone: result.timezone || "auto"
+      });
+    }
 
     const weatherMap = [
       { codes: [0], label: "Clear", kind: "clear" },
@@ -1274,21 +1619,25 @@
     }
 
     function formatFullDate(date) {
-      return new Intl.DateTimeFormat("en-US", {
+      return new Intl.DateTimeFormat("en-US", withPointTimeZone({
         weekday: "long",
         month: "long",
         day: "numeric",
-        year: "numeric",
-        timeZone: point.timezone
-      }).format(date);
+        year: "numeric"
+      })).format(date);
     }
 
     function formatShortDate(isoDate) {
       const date = new Date(`${isoDate}T12:00:00`);
       return {
-        weekday: new Intl.DateTimeFormat("en-US", { weekday: "short", timeZone: point.timezone }).format(date),
-        date: new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: point.timezone }).format(date)
+        weekday: new Intl.DateTimeFormat("en-US", withPointTimeZone({ weekday: "short" })).format(date),
+        date: new Intl.DateTimeFormat("en-US", withPointTimeZone({ month: "short", day: "numeric", year: "numeric" })).format(date)
       };
+    }
+
+    function withPointTimeZone(options) {
+      if (!point.timezone || point.timezone === "auto") return options;
+      return { ...options, timeZone: point.timezone };
     }
 
     function roundTemp(value) {
@@ -1528,7 +1877,6 @@
         <section class="period ${summary.period}">
           <div class="period-title">
             <h3>${summary.title}</h3>
-            <span>${summary.tempLabel}</span>
           </div>
           <div class="icon-wrap ${summary.period} ${escapeAttribute(summary.weather.iconClass)}">
             <img class="weather-icon-img" src="${escapeAttribute(summary.weather.iconUrl)}" alt="${escapeAttribute(summary.weather.label)}">
@@ -1551,12 +1899,11 @@
 
     function renderForecast(data, recordExtremes = {}) {
       const days = data.daily.time || [];
-      const todayIso = new Intl.DateTimeFormat("en-CA", {
-        timeZone: point.timezone,
+      const todayIso = new Intl.DateTimeFormat("en-CA", withPointTimeZone({
         year: "numeric",
         month: "2-digit",
         day: "2-digit"
-      }).format(new Date());
+      })).format(new Date());
 
       grid.innerHTML = days.map((isoDate, index) => {
         const dateBits = formatShortDate(isoDate);
@@ -1578,12 +1925,12 @@
       }).join("");
 
       status.hidden = true;
-      document.querySelector("#updatedStamp").textContent = `Updated ${new Intl.DateTimeFormat("en-US", {
+      document.querySelector("#todayStamp").textContent = formatFullDate(new Date());
+      document.querySelector("#updatedStamp").textContent = `Updated ${new Intl.DateTimeFormat("en-US", withPointTimeZone({
         hour: "numeric",
         minute: "2-digit",
-        timeZoneName: "short",
-        timeZone: point.timezone
-      }).format(new Date())} | ${data.modelLabel || modelModes.blend.label}`;
+        timeZoneName: "short"
+      })).format(new Date())} | ${data.modelLabel || modelModes.blend.label}`;
     }
 
     function renderAlerts(data) {
@@ -1591,7 +1938,7 @@
       alertCount.textContent = features.length ? `${features.length} active` : "None active";
 
       if (!features.length) {
-        alertsList.innerHTML = `<div class="source-note">No active NWS watches, warnings, advisories, or statements for ${point.zip}.</div>`;
+        alertsList.innerHTML = `<div class="source-note">No active NWS watches, warnings, advisories, or statements for ${escapeHtml(locationDisplay(point))}.</div>`;
         return;
       }
 
@@ -1638,14 +1985,13 @@
       if (!value) return "--";
       const date = new Date(value);
       if (Number.isNaN(date.getTime())) return value;
-      return new Intl.DateTimeFormat("en-US", {
+      return new Intl.DateTimeFormat("en-US", withPointTimeZone({
         month: "short",
         day: "numeric",
         hour: "numeric",
         minute: "2-digit",
-        timeZoneName: "short",
-        timeZone: point.timezone
-      }).format(date);
+        timeZoneName: "short"
+      })).format(date);
     }
 
     function escapeHtml(value) {
@@ -1858,23 +2204,22 @@
       const modeConfig = modelModes.blend;
       const loadingLabel = typeof modeConfig.loading === "function" ? modeConfig.loading(location) : modeConfig.loading;
 
-      document.querySelector("#forecastTitle").textContent = `${location.zip} Nine Day Forecast`;
+      const display = locationDisplay(location);
+      document.querySelector("#forecastTitle").textContent = `${titleLocation(location)} Nine Day Forecast`;
       document.querySelector("#forecastSubtitle").textContent = modeConfig.subtitle(location);
       document.querySelector("#modelLink").href = forecastUrl;
       document.querySelector("#modelLink").textContent = location.modelSet === "gfs"
         ? "GFS source JSON"
         : "NBM source JSON";
       document.querySelector("#alertsLink").href = alertsUrl;
-      document.querySelectorAll("[data-location]").forEach((button) => {
-        button.setAttribute("aria-pressed", String(button.dataset.location === location.zip));
-      });
+      renderFavorites();
 
       grid.innerHTML = "";
       status.className = "loading";
       status.hidden = false;
-      status.textContent = `Loading 9 days of ${loadingLabel} for ${location.zip}...`;
+      status.textContent = `Loading 9 days of ${loadingLabel} for ${display}...`;
       alertCount.textContent = "Checking...";
-      alertsList.innerHTML = `<div class="source-note">Loading active NWS alerts for ${location.zip}.</div>`;
+      alertsList.innerHTML = `<div class="source-note">Loading active NWS alerts for ${escapeHtml(display)}.</div>`;
       document.querySelector("#updatedStamp").textContent = "Fetching model data";
 
       init();
@@ -1886,6 +2231,7 @@
       try {
         const forecastPromise = fetchBlendForecast(point);
         const forecast = await forecastPromise;
+        if (forecast.timezone) point.timezone = forecast.timezone;
         const [recordExtremes, alerts] = await Promise.all([
           fetchRecordExtremes(point, forecast).catch(() => ({})),
           fetchJson(alertsUrl, { headers: { Accept: "application/geo+json" } })
