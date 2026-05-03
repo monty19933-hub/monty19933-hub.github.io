@@ -498,16 +498,11 @@
       position: absolute;
       inset: 0;
       z-index: 1;
-      background: rgba(255, 230, 84, 0.55);
-      opacity: 0;
-      animation: storm-flash 2.8s steps(1, end) infinite;
-    }
-
-    .icon-wrap.storm-severe::before {
       background:
         url("assets/effects/severe-lightning-bolt.png") 50% -24px / 116px 156px no-repeat,
         radial-gradient(circle at 50% 38%, rgba(255, 238, 94, 0.66), rgba(115, 211, 255, 0.24) 28%, transparent 64%);
       filter: drop-shadow(0 0 9px rgba(255, 247, 176, 0.95)) drop-shadow(0 0 12px rgba(87, 185, 255, 0.75));
+      opacity: 0;
       animation: severe-bolt-flash 1.55s steps(1, end) infinite;
     }
 
@@ -754,14 +749,6 @@
     @keyframes ice-fall {
       from { background-position: var(--ice-x1) 0, var(--ice-x2) 9px; }
       to { background-position: var(--ice-x1) var(--ice-a), var(--ice-x2) calc(9px + var(--ice-b)); }
-    }
-
-    @keyframes storm-flash {
-      0%, 73%, 100% { opacity: 0; }
-      74% { opacity: 0.56; }
-      78% { opacity: 0; }
-      82% { opacity: 0.36; }
-      86% { opacity: 0; }
     }
 
     @keyframes severe-bolt-flash {
@@ -1217,7 +1204,6 @@
       const label = period === "day" && match.label === "Clear" ? "Sunny" : match.label;
       const windy = Number(metrics.windSpeed) >= 20 || Number(metrics.windGust) >= 30;
       const intensityClass = precipitationIntensityClass(match.kind, code, metrics);
-      const severeClass = match.kind === "storm" && (Number(code) >= 96 || clampPercent(metrics.severe) >= 8) ? " storm-severe" : "";
       const motionClass = stormyKinds.has(match.kind)
         ? "stormy"
         : rainyKinds.has(match.kind)
@@ -1237,7 +1223,7 @@
         period,
         iconFile,
         iconUrl: iconData[iconFile] || `${iconBase}${iconFile}`,
-        iconClass: `${match.kind} ${motionClass}${severeClass}${intensityClass ? ` ${intensityClass}` : ""}${windy ? " windy" : ""}`
+        iconClass: `${match.kind} ${motionClass}${intensityClass ? ` ${intensityClass}` : ""}${windy ? " windy" : ""}`
       };
     }
 
