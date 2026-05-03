@@ -253,6 +253,7 @@
     }
 
     .alert-button {
+      --alert-severity-text: var(--alert);
       width: 100%;
       border: 1px solid rgba(177, 75, 50, 0.22);
       background: #fff;
@@ -278,6 +279,7 @@
     }
 
     .alert-button.alert-warning {
+      --alert-severity-text: #fff;
       background: #E73121;
       color: #fff;
       border-color: rgba(131, 18, 10, 0.5);
@@ -309,11 +311,10 @@
     }
 
     .alert-title > span:last-child {
-      color: var(--alert);
+      color: var(--alert-severity-text);
       white-space: nowrap;
     }
 
-    .alert-button.alert-warning .alert-title > span:last-child,
     .alert-button.alert-warning .source-note {
       color: rgba(255, 255, 255, 0.92);
     }
@@ -1121,6 +1122,32 @@
       border-radius: 6px;
       padding: 10px;
       background: #fbfcfc;
+      display: grid;
+      gap: 4px;
+      align-content: start;
+    }
+
+    .detail > span:last-child {
+      display: block;
+    }
+
+    .detail.alert-severity {
+      --alert-severity-text: var(--alert);
+    }
+
+    .detail.alert-severity .value {
+      color: var(--alert-severity-text);
+    }
+
+    .detail.alert-severity.alert-warning {
+      --alert-severity-text: #fff;
+      color: #fff;
+      background: #E73121;
+      border-color: rgba(131, 18, 10, 0.5);
+    }
+
+    .detail.alert-severity.alert-warning .label {
+      color: rgba(255, 255, 255, 0.82);
     }
 
     @media (max-width: 720px) {
@@ -1454,6 +1481,9 @@
 
     document.querySelector("#todayStamp").textContent = formatFullDate(new Date());
     document.querySelector("#closeDialog").addEventListener("click", () => dialog.close());
+    dialog.addEventListener("click", (event) => {
+      if (event.target === dialog) dialog.close();
+    });
     document.querySelector("#closeHourlyDialog").addEventListener("click", () => hourlyDialog.close());
     hourlyDialog.addEventListener("click", (event) => {
       if (event.target === hourlyDialog) hourlyDialog.close();
@@ -2430,14 +2460,15 @@
     function showAlert(feature) {
       const props = feature.properties || {};
       const detailUrl = props["@id"] || props.id || alertsUrl;
+      const alertClass = alertCategoryClass(props.event);
       dialogTitle.textContent = props.event || "NWS Alert";
       dialogHeadline.textContent = props.headline || "";
       dialogBody.innerHTML = `
         <div class="detail-grid">
-          <div class="detail"><span class="label">Severity</span><span class="value">${escapeHtml(props.severity || "--")}</span></div>
+          <div class="detail alert-severity ${alertClass}"><span class="label">Severity</span><span class="value">${escapeHtml(props.severity || "--")}</span></div>
           <div class="detail"><span class="label">Certainty</span><span class="value">${escapeHtml(props.certainty || "--")}</span></div>
-          <div class="detail"><span class="label">Effective</span><span>${escapeHtml(formatAlertTime(props.effective))}</span></div>
-          <div class="detail"><span class="label">Expires</span><span>${escapeHtml(formatAlertTime(props.expires))}</span></div>
+          <div class="detail"><span class="label">Effective</span><span class="detail-value">${escapeHtml(formatAlertTime(props.effective))}</span></div>
+          <div class="detail"><span class="label">Expires</span><span class="detail-value">${escapeHtml(formatAlertTime(props.expires))}</span></div>
         </div>
         <p>${escapeHtml(props.description || "No description supplied by NWS.")}</p>
         ${props.instruction ? `<p><strong>Instruction:</strong> ${escapeHtml(props.instruction)}</p>` : ""}
