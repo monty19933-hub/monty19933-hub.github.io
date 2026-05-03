@@ -636,6 +636,62 @@
       overflow-wrap: anywhere;
     }
 
+    .inline-alerts {
+      display: grid;
+      gap: 5px;
+    }
+
+    .inline-alert {
+      width: 100%;
+      border: 1px solid rgba(177, 75, 50, 0.22);
+      border-radius: 6px;
+      padding: 6px 7px;
+      background: #fff;
+      color: var(--ink);
+      cursor: pointer;
+      text-align: left;
+      display: grid;
+      gap: 2px;
+      font-size: 0.72rem;
+      font-weight: 850;
+      line-height: 1.15;
+    }
+
+    .inline-alert.alert-statement {
+      background: #EED9C4;
+    }
+
+    .inline-alert.alert-advisory {
+      background: #FFEF00;
+    }
+
+    .inline-alert.alert-watch {
+      background: #FFA500;
+    }
+
+    .inline-alert.alert-warning {
+      background: #E73121;
+      color: #fff;
+      border-color: rgba(131, 18, 10, 0.5);
+    }
+
+    .inline-alert span {
+      color: inherit;
+      opacity: 0.82;
+      font-size: 0.66rem;
+      font-weight: 750;
+    }
+
+    .inline-alert:hover,
+    .inline-alert:focus-visible {
+      border-color: var(--alert);
+      outline: none;
+    }
+
+    .hourly-alerts {
+      grid-column: 1 / -1;
+    }
+
     .temp {
       border: 1px solid var(--line);
       border-radius: 6px;
@@ -1132,32 +1188,22 @@
     }
 
     .detail.alert-severity {
-      background: #fbfcfc;
-    }
-
-    .detail.alert-severity.alert-statement {
-      background: #EED9C4;
-      border-color: rgba(128, 89, 54, 0.34);
-    }
-
-    .detail.alert-severity.alert-advisory {
-      background: #FFEF00;
-      border-color: rgba(156, 138, 0, 0.38);
-    }
-
-    .detail.alert-severity.alert-watch {
-      background: #FFA500;
-      border-color: rgba(157, 95, 0, 0.42);
+      --alert-severity-text: var(--alert);
+      background: var(--alert-severity-text);
+      color: #fff;
+      border-color: color-mix(in srgb, var(--alert-severity-text), black 24%);
     }
 
     .detail.alert-severity.alert-warning {
-      color: #fff;
-      background: #E73121;
-      border-color: rgba(131, 18, 10, 0.5);
+      --alert-severity-text: #fff;
+      color: var(--ink);
+      background: var(--alert-severity-text);
+      border-color: rgba(80, 96, 112, 0.24);
     }
 
-    .detail.alert-severity.alert-warning .label {
-      color: rgba(255, 255, 255, 0.82);
+    .detail.alert-severity .label {
+      color: currentColor;
+      opacity: 0.78;
     }
 
     @media (max-width: 720px) {
@@ -1388,6 +1434,8 @@
     let forecastUrl = "";
     let alertsUrl = "";
     let currentForecastData = null;
+    let currentAlerts = [];
+    let currentAlertsById = new Map();
 
     const modelModes = {
       blend: {
@@ -1451,6 +1499,10 @@
       return `https://api.weather.gov/alerts/active?point=${location.latitude},${location.longitude}`;
     }
 
+    function buildNwsPointUrl(location) {
+      return `https://api.weather.gov/points/${location.latitude},${location.longitude}`;
+    }
+
     function buildRecordUrl(location) {
       const currentYear = new Date().getFullYear();
       const startYear = 1991;
@@ -1503,8 +1555,18 @@
     renderFavorites();
     setupLocationControls();
     grid.addEventListener("click", (event) => {
+      const alertButton = event.target.closest("[data-alert-id]");
+      if (alertButton) {
+        showAlert(currentAlertsById.get(alertButton.dataset.alertId));
+        return;
+      }
+
       const button = event.target.closest("[data-hourly-date]");
       if (button) openHourlyDialog(button.dataset.hourlyDate);
+    });
+    hourlyDialogBody.addEventListener("click", (event) => {
+      const alertButton = event.target.closest("[data-alert-id]");
+      if (alertButton) showAlert(currentAlertsById.get(alertButton.dataset.alertId));
     });
 
     function locationKey(location) {
@@ -2077,6 +2139,27 @@
       return (Math.atan2(eastComponent, northComponent) * 180 / Math.PI + 360) % 360;
     }
 
+    function intervalForIndices(hourly, indices, fallbackIsoDate, isDaytime) {
+      const times = hourly.time || [];
+      if (indices.length) {
+        const start = times[indices[0]];
+        const end = addHoursToLocalIso(times[indices[indices.length - 1]], 1);
+        return { start, end };
+      }
+
+      return isDaytime
+        ? { start: `${fallbackIsoDate}T06:00`, end: `${fallbackIsoDate}T18:00` }
+        : { start: `${fallbackIsoDate}T18:00`, end: addHoursToLocalIso(`${fallbackIsoDate}T23:00`, 7) };
+    }
+
+    function addHoursToLocalIso(value, hours) {
+      const date = new Date(`${value}:00`);
+      if (Number.isNaN(date.getTime())) return value;
+      date.setHours(date.getHours() + hours);
+      const pad = (part) => String(part).padStart(2, "0");
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    }
+
     function dominantWeatherCode(hourly, indices, fallbackCode) {
       const values = hourly.weather_code || [];
       const counts = new Map();
@@ -2117,6 +2200,7 @@
       const rain = maxForIndices(data.hourly, "rain_probability", indices);
       const snow = maxForIndices(data.hourly, "snowfall_probability", indices);
       const severe = severeChance(thunder, cape, windGust, rainAmount);
+      const interval = intervalForIndices(data.hourly, indices, isoDate, isDaytime);
       const code = representativeWeatherCode(
         dominantWeatherCode(data.hourly, indices, data.daily.weather_code[dailyIndex]),
         { thunder, rain, snow, rainAmount, snowAmount }
@@ -2139,7 +2223,9 @@
         windSpeed,
         windGust,
         windDirection,
-        cape
+        cape,
+        startTime: interval.start,
+        endTime: interval.end
       };
     }
 
@@ -2166,6 +2252,8 @@
       return {
         period,
         title: formatHourlyTime(hourly.time?.[index]),
+        startTime: hourly.time?.[index] || "",
+        endTime: addHoursToLocalIso(hourly.time?.[index] || "", 1),
         tempLabel: "Hourly",
         temp: Number(hourly.temperature_2m?.[index]),
         code,
@@ -2321,6 +2409,7 @@
     }
 
     function renderPeriod(summary) {
+      const alerts = alertsForInterval(summary.startTime, summary.endTime);
       return `
         <section class="period ${summary.period}">
           <div class="period-title">
@@ -2330,6 +2419,7 @@
             <img class="weather-icon-img" src="${escapeAttribute(summary.weather.iconUrl)}" alt="${escapeAttribute(summary.weather.label)}">
           </div>
           <div class="condition">${escapeHtml(conditionText(summary))}</div>
+          ${renderInlineAlerts(alerts)}
           <div class="temp${tempRecordClass(summary)}"${tempRecordTitle(summary)}>
             <span class="label">${summary.tempLabel} Temp</span>
             <span class="value">${roundTemp(summary.temp)}</span>
@@ -2350,7 +2440,28 @@
       return `<span class="metric-pill"><span class="label">${escapeHtml(label)}</span><strong>${value}</strong></span>`;
     }
 
+    function renderInlineAlerts(alerts, extraClass = "") {
+      if (!alerts.length) return "";
+      const className = extraClass ? `inline-alerts ${extraClass}` : "inline-alerts";
+      return `
+        <div class="${className}">
+          ${alerts.map((feature) => {
+            const props = feature.properties || {};
+            const alertClass = alertCategoryClass(props.event);
+            const id = alertFeatureId(feature);
+            return `
+              <button class="inline-alert ${alertClass}" type="button" data-alert-id="${escapeAttribute(id)}">
+                ${escapeHtml(props.event || "NWS Alert")}
+                <span>${escapeHtml(props.severity || "Alert")} | Until ${escapeHtml(formatAlertTime(alertEndValue(props)))}</span>
+              </button>
+            `;
+          }).join("")}
+        </div>
+      `;
+    }
+
     function renderHourlyRow(summary) {
+      const alerts = alertsForInterval(summary.startTime, summary.endTime);
       return `
         <article class="hourly-row">
           <div class="hourly-time">${escapeHtml(summary.title)}<span>${summary.period === "day" ? "Daytime" : "Nighttime"}</span></div>
@@ -2374,6 +2485,7 @@
             ${hourlyMetric("Gusts", formatWindSpeed(summary.windGust))}
             ${hourlyMetric("Dir", `${formatWindDirection(summary.windDirection)}${windArrow(summary.windDirection)}`)}
           </div>
+          ${renderInlineAlerts(alerts, "hourly-alerts")}
         </article>
       `;
     }
@@ -2459,6 +2571,59 @@
       });
     }
 
+    function setCurrentAlerts(data) {
+      currentAlerts = alertFeatures(data);
+      currentAlertsById = new Map(currentAlerts.map((feature) => [alertFeatureId(feature), feature]));
+    }
+
+    function alertFeatures(data) {
+      return Array.isArray(data?.features) ? data.features : [];
+    }
+
+    function alertFeatureId(feature) {
+      const props = feature?.properties || {};
+      return String(feature?.id || props.id || props["@id"] || `${props.event || "alert"}-${props.sent || props.effective || ""}`);
+    }
+
+    function alertsForInterval(startIso, endIso) {
+      if (!startIso || !endIso || !currentAlerts.length) return [];
+      return currentAlerts.filter((feature) => alertOverlapsInterval(feature, startIso, endIso));
+    }
+
+    function alertOverlapsInterval(feature, startIso, endIso) {
+      const props = feature?.properties || {};
+      const alertStart = alertTimeInPointZone(alertStartValue(props));
+      const alertEnd = alertTimeInPointZone(alertEndValue(props));
+      if (!alertEnd) return false;
+      return (!alertStart || alertStart < endIso) && alertEnd > startIso;
+    }
+
+    function alertStartValue(props) {
+      return props.onset || props.effective || props.sent || "";
+    }
+
+    function alertEndValue(props) {
+      return props.ends || props.expires || "";
+    }
+
+    function alertTimeInPointZone(value) {
+      if (!value) return "";
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return "";
+      const parts = new Intl.DateTimeFormat("en-US", withPointTimeZone({
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hourCycle: "h23"
+      })).formatToParts(date).reduce((accumulator, part) => {
+        accumulator[part.type] = part.value;
+        return accumulator;
+      }, {});
+      return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
+    }
+
     function alertCategoryClass(eventName) {
       const event = String(eventName || "").toLowerCase();
       if (event.includes("warning")) return "alert-warning";
@@ -2469,6 +2634,7 @@
     }
 
     function showAlert(feature) {
+      if (!feature) return;
       const props = feature.properties || {};
       const detailUrl = props["@id"] || props.id || alertsUrl;
       const alertClass = alertCategoryClass(props.event);
@@ -2525,6 +2691,42 @@
 
     function emptyAlerts() {
       return { type: "FeatureCollection", features: [] };
+    }
+
+    async function fetchNwsAlerts(location) {
+      const headers = { Accept: "application/geo+json" };
+      const [pointAlerts, pointMetadata] = await Promise.all([
+        fetchJson(buildAlertsUrl(location), { headers }).catch(() => emptyAlerts()),
+        fetchJson(buildNwsPointUrl(location), { headers }).catch(() => null)
+      ]);
+      const collections = [pointAlerts];
+      const zones = nwsZoneIds(pointMetadata);
+
+      if (zones.length) {
+        const zoneAlerts = await Promise.all(zones.map((zone) => (
+          fetchJson(`https://api.weather.gov/alerts/active?zone=${encodeURIComponent(zone)}`, { headers }).catch(() => emptyAlerts())
+        )));
+        collections.push(...zoneAlerts);
+      }
+
+      return { type: "FeatureCollection", features: dedupeAlerts(collections) };
+    }
+
+    function nwsZoneIds(pointMetadata) {
+      const props = pointMetadata?.properties || {};
+      return [...new Set([props.forecastZone, props.county, props.fireWeatherZone]
+        .map((url) => String(url || "").split("/").filter(Boolean).pop())
+        .filter(Boolean))];
+    }
+
+    function dedupeAlerts(collections) {
+      const alerts = new Map();
+      collections.forEach((collection) => {
+        alertFeatures(collection).forEach((feature) => {
+          alerts.set(alertFeatureId(feature), feature);
+        });
+      });
+      return [...alerts.values()];
     }
 
     async function fetchRecordExtremes(location, forecast) {
@@ -2767,6 +2969,8 @@
     function setLocation(location) {
       point = location;
       currentForecastData = null;
+      currentAlerts = [];
+      currentAlertsById = new Map();
       forecastUrl = buildForecastUrl(location);
       alertsUrl = buildAlertsUrl(location);
       const modeConfig = modelModes.blend;
@@ -2802,10 +3006,11 @@
         if (forecast.timezone) point.timezone = forecast.timezone;
         const [recordExtremes, alerts] = await Promise.all([
           fetchRecordExtremes(point, forecast).catch(() => readRecordCache(point, forecast)),
-          fetchJson(alertsUrl, { headers: { Accept: "application/geo+json" } }).catch(() => emptyAlerts())
+          fetchNwsAlerts(point).catch(() => emptyAlerts())
         ]);
 
         if (token !== loadToken) return;
+        setCurrentAlerts(alerts);
         renderForecast(forecast, recordExtremes);
         renderAlerts(alerts);
       } catch (error) {
