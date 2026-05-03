@@ -150,6 +150,8 @@
       color: var(--temp-color, #4b0082);
       font-size: 1.55rem;
       text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+      -webkit-text-stroke: var(--temp-stroke, 0 transparent);
+      paint-order: stroke fill;
     }
 
     .location-toggle {
@@ -975,6 +977,9 @@
       border-radius: 5px;
       background: var(--temp-bg, transparent);
       color: var(--temp-color, currentColor);
+      text-shadow: var(--temp-shadow, none);
+      -webkit-text-stroke: var(--temp-stroke, 0 transparent);
+      paint-order: stroke fill;
     }
 
     .record-note {
@@ -2699,7 +2704,19 @@
     function temperatureTextBackground(value) {
       if (!Number.isFinite(value)) return "transparent";
       const displayed = Math.round(value);
-      return displayed >= 56 && displayed <= 65 ? "#edf0f2" : "transparent";
+      return displayed >= 56 && displayed <= 65 ? "#d9dde2" : "transparent";
+    }
+
+    function temperatureTextStroke(value) {
+      if (!Number.isFinite(value)) return "0 transparent";
+      const displayed = Math.round(value);
+      return displayed >= 56 && displayed <= 65 ? "1px rgba(20, 24, 30, 0.45)" : "0 transparent";
+    }
+
+    function temperatureTextShadow(value) {
+      if (!Number.isFinite(value)) return "none";
+      const displayed = Math.round(value);
+      return displayed >= 56 && displayed <= 65 ? "0 1px 0 rgba(255, 255, 255, 0.75)" : "none";
     }
 
     function interpolateBandColor(range, ratio) {
@@ -2841,7 +2858,7 @@
             <img class="weather-icon-img" src="${escapeAttribute(summary.weather.iconUrl)}" alt="${escapeAttribute(summary.weather.label)}">
           </div>
           <div class="condition">${escapeHtml(conditionText(summary))}</div>
-          <div class="temp${tempRecordClass(summary)}" style="--temp-color: ${temperatureColor(summary.temp)}; --temp-bg: ${temperatureTextBackground(summary.temp)}"${tempRecordTitle(summary)}>
+          <div class="temp${tempRecordClass(summary)}" style="--temp-color: ${temperatureColor(summary.temp)}; --temp-bg: ${temperatureTextBackground(summary.temp)}; --temp-stroke: ${temperatureTextStroke(summary.temp)}; --temp-shadow: ${temperatureTextShadow(summary.temp)}"${tempRecordTitle(summary)}>
             <span class="label">${summary.tempLabel} Temp</span>
             <span class="value">${roundTemp(summary.temp)}</span>
             ${tempRecordNote(summary)}
@@ -2990,7 +3007,7 @@
           <strong>${escapeHtml(data.condition)}</strong>
           <span>${escapeHtml(data.station || "NWS observation")} | ${escapeHtml(formatObservationTime(data.timestamp))}</span>
         </div>
-        ${currentMetric("Temperature", formatCurrentTemp(data.temperature), "current-temp", `--temp-color: ${temperatureColor(data.temperature)}; --temp-bg: ${temperatureTextBackground(data.temperature)}`)}
+        ${currentMetric("Temperature", formatCurrentTemp(data.temperature), "current-temp", `--temp-color: ${temperatureColor(data.temperature)}; --temp-bg: ${temperatureTextBackground(data.temperature)}; --temp-stroke: ${temperatureTextStroke(data.temperature)}; --temp-shadow: ${temperatureTextShadow(data.temperature)}`)}
         ${currentMetric("Humidity", formatCurrentHumidity(data.humidity))}
         ${currentMetric("Wind", `${formatWindSpeed(data.windSpeed)} ${formatWindDirection(data.windDirection)}${windArrow(data.windDirection)}`)}
         ${currentMetric("Dew Point", formatCurrentTemp(data.dewpoint))}
