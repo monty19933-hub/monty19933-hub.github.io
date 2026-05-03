@@ -79,6 +79,75 @@
       font-size: 0.92rem;
     }
 
+    .current-conditions {
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: 126px minmax(170px, 1fr) repeat(6, minmax(96px, 0.72fr));
+      gap: 10px;
+      align-items: stretch;
+      padding: 12px;
+      border: 1px solid rgba(80, 96, 112, 0.16);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.72);
+      box-shadow: 0 8px 20px rgba(71, 83, 98, 0.08);
+    }
+
+    .current-conditions[hidden] {
+      display: none;
+    }
+
+    .current-icon {
+      min-height: 96px;
+    }
+
+    .current-summary {
+      display: grid;
+      align-content: center;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .current-summary .label,
+    .current-metric .label {
+      font-size: 0.68rem;
+    }
+
+    .current-summary strong {
+      font-size: 1.18rem;
+      line-height: 1.1;
+      overflow-wrap: anywhere;
+    }
+
+    .current-summary span {
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 750;
+      line-height: 1.25;
+    }
+
+    .current-metric {
+      display: grid;
+      align-content: center;
+      gap: 5px;
+      min-width: 0;
+      padding: 8px;
+      border: 1px solid rgba(80, 96, 112, 0.14);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.66);
+    }
+
+    .current-metric strong {
+      font-size: 1rem;
+      line-height: 1.15;
+      overflow-wrap: anywhere;
+    }
+
+    .current-temp strong {
+      color: hsl(var(--temp-hue, 270) 88% 48%);
+      font-size: 1.55rem;
+      text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+    }
+
     .location-toggle {
       margin: 16px 0 0;
       display: flex;
@@ -1372,6 +1441,14 @@
         justify-self: start;
       }
 
+      .current-conditions {
+        grid-template-columns: 96px 1fr;
+      }
+
+      .current-metric {
+        min-height: 74px;
+      }
+
       .location-search-form {
         grid-template-columns: 1fr;
       }
@@ -1418,6 +1495,14 @@
     }
 
     @media (max-width: 560px) {
+      .current-conditions {
+        grid-template-columns: 1fr;
+      }
+
+      .current-icon {
+        width: 100%;
+      }
+
       .periods {
         grid-template-columns: 1fr;
         grid-template-rows: none;
@@ -1485,6 +1570,10 @@
       </div>
     </header>
 
+    <section class="current-conditions" id="currentConditions" aria-live="polite">
+      <div class="source-note">Loading current NWS conditions...</div>
+    </section>
+
     <nav class="location-toggle" id="favoritesList" aria-label="Favorite forecast locations"></nav>
 
     <section class="location-tools" aria-label="Find another forecast location">
@@ -1512,7 +1601,7 @@
     <section class="forecast-grid" id="forecastGrid" aria-live="polite"></section>
 
     <footer>
-      <p class="source-note">Forecast cards use computer model guidance from Open-Meteo. The forecast uses HRRR/GFS, NAM, and NBM for days 1-2, then NBM only for days 3-9. The NWS feed is used only for active watches, warnings, advisories, and statements.</p>
+      <p class="source-note">Forecast cards use computer model guidance from Open-Meteo. The forecast uses HRRR/GFS, NAM, and NBM for days 1-2, then NBM only for days 3-9. The NWS feed is used for current conditions and active watches, warnings, advisories, and statements.</p>
       <p class="source-note">Potential record high/low coloring compares the forecast temperature against Open-Meteo historical reanalysis daily extremes from 1991 through last year for the same point location and calendar date.</p>
       <p class="source-note">Severe Chance is a model-derived proxy from thunderstorm probability, CAPE, wind gusts, and rain amount; it is not an official severe weather outlook.</p>
       <p class="source-note">City and ZIP search uses geocoding only to find latitude and longitude; forecast cards still use the model guidance described above.</p>
@@ -1672,6 +1761,10 @@
       return `https://api.weather.gov/points/${location.latitude},${location.longitude}`;
     }
 
+    function buildNwsObservationStationsUrl(pointMetadata) {
+      return pointMetadata?.properties?.observationStations || "";
+    }
+
     function buildRecordUrl(location) {
       const currentYear = new Date().getFullYear();
       const startYear = 1991;
@@ -1691,6 +1784,7 @@
 
     const grid = document.querySelector("#forecastGrid");
     const status = document.querySelector("#status");
+    const currentConditions = document.querySelector("#currentConditions");
     const alertsList = document.querySelector("#alertsList");
     const alertCount = document.querySelector("#alertCount");
     const dialog = document.querySelector("#alertDialog");
@@ -2541,6 +2635,41 @@
       return Number.isFinite(value) ? `${clampPercent(value)}%` : "N/A";
     }
 
+    function celsiusToFahrenheit(value) {
+      return Number.isFinite(value) ? (value * 9 / 5) + 32 : NaN;
+    }
+
+    function kmhToMph(value) {
+      return Number.isFinite(value) ? value * 0.621371 : NaN;
+    }
+
+    function metersToMiles(value) {
+      return Number.isFinite(value) ? value / 1609.344 : NaN;
+    }
+
+    function nwsValue(container, key) {
+      const value = Number(container?.[key]?.value);
+      return Number.isFinite(value) ? value : NaN;
+    }
+
+    function formatCurrentTemp(value) {
+      return Number.isFinite(value) ? `${Math.round(value)}\u00b0` : "N/A";
+    }
+
+    function formatCurrentHumidity(value) {
+      return Number.isFinite(value) ? `${Math.round(value)}%` : "N/A";
+    }
+
+    function formatVisibility(value) {
+      return Number.isFinite(value) ? `${value.toFixed(value < 10 ? 1 : 0)} mi` : "N/A";
+    }
+
+    function temperatureHue(value) {
+      if (!Number.isFinite(value)) return 270;
+      const clamped = Math.max(0, Math.min(90, value));
+      return Math.round(270 + (clamped / 90) * 60);
+    }
+
     function formatWindSpeed(value) {
       return Number.isFinite(value) ? `${Math.round(value)}mph` : "--";
     }
@@ -2785,6 +2914,50 @@
       })).format(new Date())} | ${data.modelLabel || modelModes.blend.label}`;
     }
 
+    function renderCurrentConditions(data) {
+      if (!data) {
+        currentConditions.innerHTML = `<div class="source-note">Current NWS conditions are unavailable for ${escapeHtml(locationDisplay(point))}.</div>`;
+        return;
+      }
+
+      const weather = weatherFor(data.code, data.period, { windSpeed: data.windSpeed });
+      currentConditions.innerHTML = `
+        <div class="icon-wrap current-icon ${data.period} ${escapeAttribute(weather.iconClass)}">
+          <img class="weather-icon-img" src="${escapeAttribute(weather.iconUrl)}" alt="${escapeAttribute(data.condition)}">
+        </div>
+        <div class="current-summary">
+          <span class="label">Current Conditions</span>
+          <strong>${escapeHtml(data.condition)}</strong>
+          <span>${escapeHtml(data.station || "NWS observation")} | ${escapeHtml(formatObservationTime(data.timestamp))}</span>
+        </div>
+        ${currentMetric("Temperature", formatCurrentTemp(data.temperature), "current-temp", `--temp-hue: ${temperatureHue(data.temperature)}`)}
+        ${currentMetric("Humidity", formatCurrentHumidity(data.humidity))}
+        ${currentMetric("Wind", `${formatWindSpeed(data.windSpeed)} ${formatWindDirection(data.windDirection)}${windArrow(data.windDirection)}`)}
+        ${currentMetric("Dew Point", formatCurrentTemp(data.dewpoint))}
+        ${currentMetric("Visibility", formatVisibility(data.visibility))}
+        ${currentMetric("Heat Index", formatCurrentTemp(data.heatIndex))}
+      `;
+    }
+
+    function currentMetric(label, value, extraClass = "", style = "") {
+      return `
+        <div class="current-metric ${extraClass}"${style ? ` style="${escapeAttribute(style)}"` : ""}>
+          <span class="label">${escapeHtml(label)}</span>
+          <strong>${value}</strong>
+        </div>
+      `;
+    }
+
+    function formatObservationTime(value) {
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return "latest";
+      return new Intl.DateTimeFormat("en-US", withPointTimeZone({
+        hour: "numeric",
+        minute: "2-digit",
+        timeZoneName: "short"
+      })).format(date);
+    }
+
     function renderAlerts(data) {
       const features = Array.isArray(data.features) ? data.features : [];
       alertCount.textContent = features.length ? `${features.length} active` : "None active";
@@ -2989,6 +3162,77 @@
       });
 
       return { type: "FeatureCollection", features: dedupeAlerts(collections) };
+    }
+
+    async function fetchNwsCurrentConditions(location) {
+      if (location?.countryCode && location.countryCode !== "US") return null;
+      const headers = { Accept: "application/geo+json" };
+      const pointMetadata = await fetchJson(buildNwsPointUrl(location), { headers });
+      const stationsUrl = buildNwsObservationStationsUrl(pointMetadata);
+      if (!stationsUrl) return null;
+      const stations = await fetchJson(stationsUrl, { headers });
+      const station = stations?.features?.[0];
+      const stationId = station?.properties?.stationIdentifier;
+      const latestUrl = station?.id
+        ? `${station.id}/observations/latest?require_qc=true`
+        : stationId
+          ? `https://api.weather.gov/stations/${encodeURIComponent(stationId)}/observations/latest?require_qc=true`
+          : "";
+      if (!latestUrl) return null;
+      const observation = await fetchJson(latestUrl, { headers })
+        .catch(() => fetchJson(latestUrl.replace("?require_qc=true", ""), { headers }).catch(() => null));
+      if (!observation) return null;
+      return normalizeNwsObservation(observation, station);
+    }
+
+    function normalizeNwsObservation(observation, station) {
+      const props = observation?.properties || {};
+      const temperature = celsiusToFahrenheit(nwsValue(props, "temperature"));
+      const dewpoint = celsiusToFahrenheit(nwsValue(props, "dewpoint"));
+      const heatIndex = celsiusToFahrenheit(nwsValue(props, "heatIndex"));
+      const windSpeed = kmhToMph(nwsValue(props, "windSpeed"));
+      const visibility = metersToMiles(nwsValue(props, "visibility"));
+      const windDirection = nwsValue(props, "windDirection");
+      const condition = props.textDescription || "Current Conditions";
+
+      return {
+        condition,
+        timestamp: props.timestamp || "",
+        station: station?.properties?.name || props.station || "",
+        temperature,
+        humidity: nwsValue(props, "relativeHumidity"),
+        windSpeed,
+        windDirection,
+        dewpoint,
+        visibility,
+        heatIndex,
+        code: currentWeatherCode(props),
+        period: currentObservationPeriod(props.timestamp)
+      };
+    }
+
+    function currentWeatherCode(props) {
+      const source = `${props.textDescription || ""} ${props.icon || ""}`.toLowerCase();
+      if (/thunder|tsra|tstm/.test(source)) return 95;
+      if (/freezing|sleet|ice|fzra/.test(source)) return 66;
+      if (/snow|flurr|blizzard|\bsn\b/.test(source)) return 71;
+      if (/drizzle|dz/.test(source)) return 51;
+      if (/rain|showers|\bra\b|shra/.test(source)) return 61;
+      if (/fog|mist|haze|smoke|dust/.test(source)) return 45;
+      if (/overcast|cloudy|ovc|bkn/.test(source)) return 3;
+      if (/partly|mostly|few|scattered|sct/.test(source)) return 2;
+      if (/clear|fair|sunny|skc/.test(source)) return 0;
+      return 3;
+    }
+
+    function currentObservationPeriod(timestamp) {
+      const date = timestamp ? new Date(timestamp) : new Date();
+      const parts = new Intl.DateTimeFormat("en-US", withPointTimeZone({
+        hour: "numeric",
+        hourCycle: "h23"
+      })).formatToParts(date);
+      const hour = Number(parts.find((part) => part.type === "hour")?.value);
+      return Number.isFinite(hour) && hour >= 6 && hour < 19 ? "day" : "night";
     }
 
     function locationStateCode(location) {
@@ -3357,6 +3601,8 @@
       renderFavorites();
 
       grid.innerHTML = "";
+      currentConditions.hidden = false;
+      currentConditions.innerHTML = `<div class="source-note">Loading current NWS conditions for ${escapeHtml(display)}.</div>`;
       status.className = "loading";
       status.hidden = false;
       status.textContent = `Loading 9 days of ${loadingLabel} for ${display}...`;
@@ -3374,19 +3620,22 @@
         const forecastPromise = fetchBlendForecast(point);
         const forecast = await forecastPromise;
         if (forecast.timezone) point.timezone = forecast.timezone;
-        const [recordExtremes, alerts] = await Promise.all([
+        const [recordExtremes, alerts, current] = await Promise.all([
           fetchRecordExtremes(point, forecast).catch(() => readRecordCache(point, forecast)),
-          fetchNwsAlerts(point).catch(() => emptyAlerts())
+          fetchNwsAlerts(point).catch(() => emptyAlerts()),
+          fetchNwsCurrentConditions(point).catch(() => null)
         ]);
 
         if (token !== loadToken) return;
         setCurrentAlerts(alerts);
+        renderCurrentConditions(current);
         renderForecast(forecast, recordExtremes);
         renderAlerts(alerts);
       } catch (error) {
         if (token !== loadToken) return;
         status.className = "error";
         status.textContent = `Unable to load live data: ${error.message}`;
+        renderCurrentConditions(null);
         alertCount.textContent = "Unavailable";
         alertsList.innerHTML = `<div class="source-note">NWS alerts could not be loaded.</div>`;
       }
