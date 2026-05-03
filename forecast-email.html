@@ -143,7 +143,7 @@
     }
 
     .current-temp strong {
-      color: hsl(var(--temp-hue, 270) 88% 48%);
+      color: var(--temp-color, #4b0082);
       font-size: 1.55rem;
       text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
     }
@@ -2665,10 +2665,38 @@
       return Number.isFinite(value) ? `${value.toFixed(value < 10 ? 1 : 0)} mi` : "N/A";
     }
 
-    function temperatureHue(value) {
-      if (!Number.isFinite(value)) return 270;
-      const clamped = Math.max(0, Math.min(90, value));
-      return Math.round(270 + (clamped / 90) * 60);
+    function temperatureColor(value) {
+      if (!Number.isFinite(value)) return "#4b0082";
+      const ranges = [
+        { min: -150, max: 0, from: "#d9c2ff", to: "#4b0082" },
+        { min: 1, max: 35, from: "#bdefff", to: "#0057b8" },
+        { min: 36, max: 55, from: "#bff7c1", to: "#16833a" },
+        { min: 56, max: 75, from: "#fff7a3", to: "#d6a400" },
+        { min: 76, max: 85, from: "#ffd29a", to: "#e56a00" },
+        { min: 86, max: 99, from: "#9c120d", to: "#ff7a70" },
+        { min: 100, max: 150, from: "#b0006d", to: "#ff9ad5" }
+      ];
+      const clamped = Math.max(-150, Math.min(150, value));
+      const range = ranges.find((candidate) => clamped >= candidate.min && clamped <= candidate.max)
+        || (clamped < 1 ? ranges[0] : ranges[ranges.length - 1]);
+      const ratio = range.max === range.min ? 1 : (clamped - range.min) / (range.max - range.min);
+      return interpolateColor(range.from, range.to, ratio);
+    }
+
+    function interpolateColor(from, to, ratio) {
+      const start = hexToRgb(from);
+      const end = hexToRgb(to);
+      const color = start.map((channel, index) => Math.round(channel + (end[index] - channel) * ratio));
+      return `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
+    }
+
+    function hexToRgb(hex) {
+      const value = hex.replace("#", "");
+      return [
+        parseInt(value.slice(0, 2), 16),
+        parseInt(value.slice(2, 4), 16),
+        parseInt(value.slice(4, 6), 16)
+      ];
     }
 
     function formatWindSpeed(value) {
@@ -2931,7 +2959,7 @@
           <strong>${escapeHtml(data.condition)}</strong>
           <span>${escapeHtml(data.station || "NWS observation")} | ${escapeHtml(formatObservationTime(data.timestamp))}</span>
         </div>
-        ${currentMetric("Temperature", formatCurrentTemp(data.temperature), "current-temp", `--temp-hue: ${temperatureHue(data.temperature)}`)}
+        ${currentMetric("Temperature", formatCurrentTemp(data.temperature), "current-temp", `--temp-color: ${temperatureColor(data.temperature)}`)}
         ${currentMetric("Humidity", formatCurrentHumidity(data.humidity))}
         ${currentMetric("Wind", `${formatWindSpeed(data.windSpeed)} ${formatWindDirection(data.windDirection)}${windArrow(data.windDirection)}`)}
         ${currentMetric("Dew Point", formatCurrentTemp(data.dewpoint))}
