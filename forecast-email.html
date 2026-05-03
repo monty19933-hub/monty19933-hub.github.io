@@ -2263,13 +2263,17 @@
     }
 
     function maxForIndices(hourly, key, indices) {
-      let max = 0;
+      let max = -Infinity;
+      let hasValue = false;
       const values = hourly[key] || [];
       indices.forEach((index) => {
         const value = Number(values[index]);
-        if (Number.isFinite(value)) max = Math.max(max, value);
+        if (Number.isFinite(value)) {
+          max = Math.max(max, value);
+          hasValue = true;
+        }
       });
-      return clampPercent(max);
+      return hasValue ? clampPercent(max) : null;
     }
 
     function numericMaxForIndices(hourly, key, indices) {
@@ -2284,10 +2288,24 @@
 
     function sumForIndices(hourly, key, indices) {
       const values = hourly[key] || [];
-      return indices.reduce((sum, index) => {
+      let hasValue = false;
+      const total = indices.reduce((sum, index) => {
         const value = Number(values[index]);
-        return Number.isFinite(value) ? sum + value : sum;
+        if (!Number.isFinite(value)) return sum;
+        hasValue = true;
+        return sum + value;
       }, 0);
+      return hasValue ? total : null;
+    }
+
+    function hourlyNumericValue(hourly, key, index) {
+      const value = Number(hourly[key]?.[index]);
+      return Number.isFinite(value) ? value : null;
+    }
+
+    function hourlyPercentValue(hourly, key, index) {
+      const value = hourlyNumericValue(hourly, key, index);
+      return Number.isFinite(value) ? clampPercent(value) : null;
     }
 
     function periodTemperature(hourly, indices, isDaytime, fallback) {
@@ -2439,11 +2457,11 @@
       const windGust = Number(hourly.wind_gusts_10m?.[index]);
       const windDirection = Number(hourly.wind_direction_10m?.[index]);
       const cape = Number(hourly.cape?.[index]);
-      const rainAmount = Number(hourly.rain?.[index]) || 0;
-      const snowAmount = Number(hourly.snowfall?.[index]) || 0;
-      const thunder = clampPercent(Number(hourly.thunderstorm_probability?.[index]) || 0);
-      const rain = clampPercent(Number(hourly.rain_probability?.[index]) || 0);
-      const snow = clampPercent(Number(hourly.snowfall_probability?.[index]) || 0);
+      const rainAmount = hourlyNumericValue(hourly, "rain", index);
+      const snowAmount = hourlyNumericValue(hourly, "snowfall", index);
+      const thunder = hourlyPercentValue(hourly, "thunderstorm_probability", index);
+      const rain = hourlyPercentValue(hourly, "rain_probability", index);
+      const snow = hourlyPercentValue(hourly, "snowfall_probability", index);
       const severe = severeChance(thunder, cape, windGust, rainAmount);
       const code = representativeWeatherCode(
         Number(hourly.weather_code?.[index]),
@@ -2494,6 +2512,7 @@
     }
 
     function severeChance(thunder, cape, windGust, rainAmount) {
+      if (!Number.isFinite(thunder) || !Number.isFinite(cape)) return null;
       const thunderChance = clampPercent(thunder);
       if (!thunderChance) return 0;
 
@@ -2512,8 +2531,13 @@
     }
 
     function formatAmount(value) {
+      if (!Number.isFinite(value)) return "N/A";
       if (!Number.isFinite(value) || value <= 0.004) return "0.00 in";
       return `${value.toFixed(value < 0.1 ? 2 : 2)} in`;
+    }
+
+    function formatPercent(value) {
+      return Number.isFinite(value) ? `${clampPercent(value)}%` : "N/A";
     }
 
     function formatWindSpeed(value) {
@@ -2548,10 +2572,11 @@
     }
 
     function probabilityRow(name, value, type, amount = "") {
-      const pct = clampPercent(value);
+      const pct = Number.isFinite(value) ? clampPercent(value) : 0;
+      const valueText = formatPercent(value);
       return `
         <div class="prob ${type === "severe" ? "severe" : ""}">
-          <div class="prob-head"><span>${name}</span><strong>${pct}%${amount ? ` | ${escapeHtml(amount)}` : ""}</strong></div>
+          <div class="prob-head"><span>${name}</span><strong>${valueText}${amount ? ` | ${escapeHtml(amount)}` : ""}</strong></div>
           <div class="track"><div class="fill ${type}" style="--pct: ${pct}%"></div></div>
         </div>
       `;
@@ -2690,12 +2715,12 @@
             <span>${escapeHtml(conditionText(summary))}</span>
           </div>
           <div class="hourly-metrics">
-            ${hourlyMetric("Chance of Rain", `${clampPercent(summary.rain)}%`)}
+            ${hourlyMetric("Chance of Rain", formatPercent(summary.rain))}
             ${hourlyMetric("Rain Amount", formatAmount(summary.rainAmount))}
-            ${hourlyMetric("Chance of Snow", `${clampPercent(summary.snow)}%`)}
+            ${hourlyMetric("Chance of Snow", formatPercent(summary.snow))}
             ${hourlyMetric("Snow Amount", formatAmount(summary.snowAmount))}
-            ${hourlyMetric("Chance of Thunderstorms", `${clampPercent(summary.thunder)}%`)}
-            ${hourlyMetric("Severe Chance", `${clampPercent(summary.severe)}%`)}
+            ${hourlyMetric("Chance of Thunderstorms", formatPercent(summary.thunder))}
+            ${hourlyMetric("Severe Chance", formatPercent(summary.severe))}
           </div>
           <div class="hourly-wind">
             ${hourlyMetric("Wind", formatWindSpeed(summary.windSpeed))}
