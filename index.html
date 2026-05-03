@@ -312,7 +312,8 @@
     }
 
     .icon-wrap.rainy .weather-icon-img,
-    .icon-wrap.snowy .weather-icon-img {
+    .icon-wrap.snowy .weather-icon-img,
+    .icon-wrap.icy .weather-icon-img {
       animation: weather-bob 2.4s ease-in-out infinite;
     }
 
@@ -345,36 +346,108 @@
       animation: sun-icon-pulse 2.6s ease-in-out infinite;
     }
 
-    .icon-wrap.rainy::after {
+    .icon-wrap.rainy::after,
+    .icon-wrap.stormy::after {
       content: "";
       position: absolute;
-      left: 29%;
-      top: 48%;
-      width: 42%;
-      height: 48%;
+      left: 24%;
+      top: 42%;
+      width: 52%;
+      height: 58%;
       z-index: 3;
-      opacity: 0.72;
-      clip-path: polygon(8% 0, 92% 0, 100% 100%, 0 100%);
+      opacity: 0.62;
+      pointer-events: none;
       background-image:
-        linear-gradient(180deg, rgba(42, 117, 185, 0.95) 0 62%, transparent 62%),
-        linear-gradient(180deg, rgba(42, 117, 185, 0.75) 0 58%, transparent 58%);
-      background-size: 10px 28px, 14px 34px;
-      background-position: 0 0, 7px 12px;
-      animation: rain-fall 0.78s linear infinite;
+        radial-gradient(ellipse at 50% 45%, rgba(34, 111, 185, 0.95) 0 2.4px, transparent 3px),
+        radial-gradient(ellipse at 50% 45%, rgba(64, 143, 205, 0.78) 0 1.8px, transparent 2.5px);
+      background-size: 24px 30px, 34px 40px;
+      background-position: 0 0, 13px 9px;
+      animation: rain-drops 1.35s linear infinite;
+    }
+
+    .icon-wrap.rain-chance::after {
+      opacity: 0.42;
+      background-size: 38px 46px, 54px 58px;
+      animation-duration: 1.9s;
+    }
+
+    .icon-wrap.rain-steady::after {
+      opacity: 0.68;
+      background-size: 22px 28px, 32px 38px;
+      animation-duration: 1.12s;
+    }
+
+    .icon-wrap.rain-heavy::after {
+      opacity: 0.9;
+      background-size: 15px 22px, 23px 29px;
+      animation-duration: 0.72s;
     }
 
     .icon-wrap.snowy::after {
       content: "";
       position: absolute;
       inset: -20px 0 0;
-      z-index: 1;
-      opacity: 0.7;
+      z-index: 3;
+      opacity: 0.62;
+      pointer-events: none;
       background-image:
-        radial-gradient(circle, rgba(106, 159, 199, 0.9) 0 2px, transparent 2.5px),
-        radial-gradient(circle, rgba(255, 255, 255, 0.95) 0 1.7px, transparent 2.2px);
-      background-size: 26px 26px, 38px 38px;
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='%236a9fc7' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M12 3v18M5 7l14 10M19 7L5 17M8 4l4 4 4-4M8 20l4-4 4 4'/%3E%3C/g%3E%3C/svg%3E"),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M12 4v16M6 8l12 8M18 8L6 16'/%3E%3C/g%3E%3C/svg%3E");
+      background-size: 30px 30px, 42px 42px;
       background-position: 0 0, 12px 8px;
       animation: snow-fall 3.4s linear infinite;
+    }
+
+    .icon-wrap.snow-flurries::after,
+    .icon-wrap.snow-chance::after {
+      opacity: 0.42;
+      background-size: 46px 46px, 64px 64px;
+      animation-duration: 5.4s;
+    }
+
+    .icon-wrap.snow-steady::after {
+      opacity: 0.68;
+      background-size: 30px 30px, 42px 42px;
+      animation-duration: 3.5s;
+    }
+
+    .icon-wrap.snow-heavy::after {
+      opacity: 0.9;
+      background-size: 22px 22px, 31px 31px;
+      animation-duration: 2.2s;
+    }
+
+    .icon-wrap.icy::after {
+      content: "";
+      position: absolute;
+      inset: -16px 8px 0;
+      z-index: 3;
+      opacity: 0.62;
+      pointer-events: none;
+      background-image:
+        radial-gradient(circle, rgba(172, 210, 231, 0.95) 0 2.1px, transparent 2.8px),
+        radial-gradient(circle, rgba(245, 252, 255, 0.95) 0 1.4px, transparent 2.1px);
+      background-size: 24px 28px, 34px 39px;
+      background-position: 0 0, 13px 9px;
+      animation: ice-fall 1.65s linear infinite;
+    }
+
+    .icon-wrap.ice-chance::after {
+      opacity: 0.42;
+      background-size: 38px 45px, 56px 62px;
+      animation-duration: 2.3s;
+    }
+
+    .icon-wrap.ice-steady::after {
+      opacity: 0.68;
+      background-size: 22px 28px, 32px 39px;
+      animation-duration: 1.55s;
+    }
+
+    .icon-wrap.ice-heavy::after {
+      opacity: 0.9;
+      background-size: 15px 20px, 24px 28px;
+      animation-duration: 0.95s;
     }
 
     .icon-wrap.stormy::before {
@@ -562,14 +635,19 @@
       50% { filter: drop-shadow(0 0 5px rgba(255, 210, 0, 0.38)); transform: scale(1.015); }
     }
 
-    @keyframes rain-fall {
-      from { background-position: 0 -30px, 7px -18px; }
-      to { background-position: 0 30px, 7px 42px; }
+    @keyframes rain-drops {
+      from { background-position: 0 -34px, 13px -22px; }
+      to { background-position: 0 36px, 13px 48px; }
     }
 
     @keyframes snow-fall {
-      from { background-position: 0 -30px, 12px -18px; }
-      to { background-position: 0 36px, 12px 48px; }
+      from { background-position: 0 -34px, 12px -22px; }
+      to { background-position: 0 44px, 12px 56px; }
+    }
+
+    @keyframes ice-fall {
+      from { background-position: 0 -32px, 13px -20px; }
+      to { background-position: 0 36px, 13px 48px; }
     }
 
     @keyframes storm-flash {
@@ -929,8 +1007,9 @@
       { codes: [2], label: "Partly Cloudy", kind: "partly-cloudy" },
       { codes: [3], label: "Cloudy", kind: "cloudy" },
       { codes: [45, 48], label: "Fog", kind: "fog" },
-      { codes: [51, 53, 55, 56, 57], label: "Drizzle", kind: "rain" },
-      { codes: [61, 63, 65, 66, 67], label: "Rain", kind: "rain" },
+      { codes: [51, 53, 55], label: "Drizzle", kind: "rain" },
+      { codes: [56, 57, 66, 67], label: "Ice", kind: "ice" },
+      { codes: [61, 63, 65], label: "Rain", kind: "rain" },
       { codes: [80, 81, 82], label: "Showers", kind: "rain" },
       { codes: [71, 73, 75, 77, 85, 86], label: "Snow", kind: "snow" },
       { codes: [95, 96, 99], label: "Thunderstorms", kind: "storm" }
@@ -938,6 +1017,7 @@
 
     const rainyKinds = new Set(["rain"]);
     const snowyKinds = new Set(["snow"]);
+    const icyKinds = new Set(["ice"]);
     const stormyKinds = new Set(["storm"]);
     const iconData = {};
     const embeddedForecastData = {};
@@ -947,15 +1027,18 @@
       const match = weatherMap.find((entry) => entry.codes.includes(Number(code))) || { label: "Variable", kind: "cloudy" };
       const label = period === "day" && match.label === "Clear" ? "Sunny" : match.label;
       const windy = Number(metrics.windSpeed) >= 20 || Number(metrics.windGust) >= 30;
+      const intensityClass = precipitationIntensityClass(match.kind, code, metrics);
       const motionClass = stormyKinds.has(match.kind)
         ? "stormy"
         : rainyKinds.has(match.kind)
           ? "rainy"
           : snowyKinds.has(match.kind)
             ? "snowy"
-            : windy
-              ? "windy"
-              : "still";
+            : icyKinds.has(match.kind)
+              ? "icy"
+              : windy
+                ? "windy"
+                : "still";
       const iconFile = iconFileFor(match.kind, period, code, windy);
 
       return {
@@ -964,8 +1047,41 @@
         period,
         iconFile,
         iconUrl: iconData[iconFile] || `${iconBase}${iconFile}`,
-        iconClass: `${match.kind} ${motionClass}${windy ? " windy" : ""}`
+        iconClass: `${match.kind} ${motionClass}${intensityClass ? ` ${intensityClass}` : ""}${windy ? " windy" : ""}`
       };
+    }
+
+    function precipitationIntensityClass(kind, code, metrics = {}) {
+      if (kind === "storm" || kind === "rain") return rainIntensityClass(metrics);
+      if (kind === "snow") return snowIntensityClass(code, metrics);
+      if (kind === "ice") return iceIntensityClass(metrics);
+      return "";
+    }
+
+    function rainIntensityClass(metrics = {}) {
+      const amount = Number(metrics.rainAmount) || 0;
+      const chance = clampPercent(metrics.rain);
+      if (amount >= 0.25 || chance >= 70) return "rain-heavy";
+      if (amount >= 0.08 || chance >= 40) return "rain-steady";
+      return "rain-chance";
+    }
+
+    function snowIntensityClass(code, metrics = {}) {
+      const numericCode = Number(code);
+      const amount = Number(metrics.snowAmount) || 0;
+      const chance = clampPercent(metrics.snow);
+      if (numericCode === 77 || (chance < 20 && amount < 0.04)) return "snow-flurries";
+      if (amount >= 1 || chance >= 70 || [75, 86].includes(numericCode)) return "snow-heavy";
+      if (amount >= 0.1 || chance >= 35 || [73, 85].includes(numericCode)) return "snow-steady";
+      return "snow-chance";
+    }
+
+    function iceIntensityClass(metrics = {}) {
+      const amount = Number(metrics.rainAmount) || 0;
+      const chance = Math.max(clampPercent(metrics.rain), clampPercent(metrics.snow));
+      if (amount >= 0.18 || chance >= 60) return "ice-heavy";
+      if (amount >= 0.05 || chance >= 30) return "ice-steady";
+      return "ice-chance";
     }
 
     function iconFileFor(kind, period, code, windy) {
@@ -980,6 +1096,7 @@
         if (numericCode === 77) return "flurries.png";
         return "snow.png";
       }
+      if (kind === "ice") return windy ? "snow-wind.png" : "snow.png";
       if (kind === "rain") {
         if (windy) return "rain-wind.png";
         if ([51, 53, 55, 56, 57].includes(numericCode)) return "drizzle.png";
@@ -1127,7 +1244,7 @@
         dominantWeatherCode(data.hourly, indices, data.daily.weather_code[dailyIndex]),
         { thunder, rain, snow, rainAmount, snowAmount }
       );
-      const weather = weatherFor(code, period, { windSpeed, windGust });
+      const weather = weatherFor(code, period, { windSpeed, windGust, rain, rainAmount, snow, snowAmount, thunder });
 
       return {
         period,
@@ -1156,10 +1273,15 @@
       const snowAmount = Number(metrics.snowAmount) || 0;
 
       if (thunder >= 15) return thunder >= 35 ? 96 : 95;
+      if (isIceCode(baseCode) && (rain >= 15 || snow >= 15 || rainAmount >= 0.02 || snowAmount >= 0.02)) return baseCode;
       if (snow >= 20 || snowAmount >= 0.1) return snowAmount >= 1 ? 75 : 71;
       if (rain >= 55 || rainAmount >= 0.35) return 63;
       if (rain >= 20 || rainAmount >= 0.04) return 61;
       return baseCode;
+    }
+
+    function isIceCode(code) {
+      return [56, 57, 66, 67].includes(Number(code));
     }
 
     function severeChance(thunder, cape, windGust, rainAmount) {
@@ -1200,6 +1322,10 @@
         const severeText = summary.code >= 96 || summary.severe >= 8;
         if (severeText) return summary.thunder >= 50 ? "Severe Thunderstorms" : "Chance of Severe Thunderstorms";
         return summary.thunder >= 50 ? "Thunderstorms" : "Chance of Thunderstorms";
+      }
+      if (summary.weather.kind === "ice") {
+        const iceChance = Math.max(summary.rain, summary.snow);
+        return iceChance >= 50 ? "Ice" : "Chance of Ice";
       }
       if (summary.snow >= 20 || summary.snowAmount >= 0.1) {
         return summary.snow >= 50 ? "Snow" : "Chance of Snow";
