@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>97223 Seven Day Model Forecast</title>
+  <title>97223 Nine Day Model Forecast</title>
   <style>
     :root {
       color-scheme: light;
@@ -910,7 +910,7 @@
   <main class="page">
     <header class="masthead">
       <div>
-        <h1 id="forecastTitle">97223 Seven Day Forecast</h1>
+        <h1 id="forecastTitle">97223 Nine Day Forecast</h1>
         <p class="subtitle" id="forecastSubtitle">NOAA/NCEP NBM computer model guidance for Tigard, Oregon.</p>
       </div>
       <div class="stamp">
@@ -927,12 +927,12 @@
     </header>
 
     <nav class="location-toggle" aria-label="Forecast location">
-      <button type="button" data-location="97223" aria-pressed="true">97223 Tigard</button>
-      <button type="button" data-location="97067" aria-pressed="false">97067 Welches</button>
-      <button type="button" data-location="97070" aria-pressed="false">97070 Wilsonville</button>
-      <button type="button" data-location="97206" aria-pressed="false">97206 Creston</button>
-      <button type="button" data-location="75080" aria-pressed="false">75080 Richardson</button>
-      <button type="button" data-location="80310" aria-pressed="false">80310 Boulder</button>
+      <button type="button" data-location="97223" aria-pressed="true">97223 Tigard, OR</button>
+      <button type="button" data-location="97067" aria-pressed="false">97067 Welches, OR</button>
+      <button type="button" data-location="97070" aria-pressed="false">97070 Wilsonville, OR</button>
+      <button type="button" data-location="97206" aria-pressed="false">97206 Creston, OR</button>
+      <button type="button" data-location="75080" aria-pressed="false">75080 Richardson, TX</button>
+      <button type="button" data-location="80310" aria-pressed="false">80310 Boulder, CO</button>
     </nav>
 
     <nav class="location-toggle model-toggle" aria-label="Forecast model source">
@@ -950,11 +950,11 @@
       </div>
     </section>
 
-    <section id="status" class="loading">Loading 7 days of model data...</section>
+    <section id="status" class="loading">Loading 9 days of model data...</section>
     <section class="forecast-grid" id="forecastGrid" aria-live="polite"></section>
 
     <footer>
-      <p class="source-note">Forecast cards use computer model guidance from Open-Meteo. The NBM mode uses NOAA/NCEP NBM only; the blend mode uses HRRR/GFS, NAM, and NBM for days 1-2, then NBM only for days 3-7. The NWS feed is used only for active watches, warnings, advisories, and statements.</p>
+      <p class="source-note">Forecast cards use computer model guidance from Open-Meteo. The NBM mode uses NOAA/NCEP NBM only; the blend mode uses HRRR/GFS, NAM, and NBM for days 1-2, then NBM only for days 3-9. The NWS feed is used only for active watches, warnings, advisories, and statements.</p>
       <p class="source-note">Potential record high/low coloring compares the forecast temperature against Open-Meteo historical reanalysis daily extremes from 1991 through last year for the same point location and calendar date.</p>
       <p class="source-note">Severe Chance is a model-derived proxy from thunderstorm probability, CAPE, wind gusts, and rain amount; it is not an official severe weather outlook.</p>
       <p class="source-note icon-credit">Icons use the local 98-06 TWC icon pack you provided, with motion added only for rain, snow, thunderstorm, and wind states.</p>
@@ -1084,7 +1084,7 @@
       const {
         model = location.modelSet === "gfs" ? "gfs_seamless" : "ncep_nbm_conus",
         endpoint = location.modelSet === "gfs" ? "gfs" : "forecast",
-        forecastDays = "7"
+        forecastDays = "9"
       } = options;
       const forecastParams = new URLSearchParams({
         latitude: location.latitude,
@@ -1897,7 +1897,7 @@
       const modeConfig = modelModes[modelMode] || modelModes.nbm;
       const loadingLabel = typeof modeConfig.loading === "function" ? modeConfig.loading(location) : modeConfig.loading;
 
-      document.querySelector("#forecastTitle").textContent = `${location.zip} Seven Day Forecast`;
+      document.querySelector("#forecastTitle").textContent = `${location.zip} Nine Day Forecast`;
       document.querySelector("#forecastSubtitle").textContent = modeConfig.subtitle(location);
       document.querySelector("#modelLink").href = forecastUrl;
       document.querySelector("#modelLink").textContent = location.modelSet === "gfs"
@@ -1914,7 +1914,7 @@
       grid.innerHTML = "";
       status.className = "loading";
       status.hidden = false;
-      status.textContent = `Loading 7 days of ${loadingLabel} for ${location.zip}...`;
+      status.textContent = `Loading 9 days of ${loadingLabel} for ${location.zip}...`;
       alertCount.textContent = "Checking...";
       alertsList.innerHTML = `<div class="source-note">Loading active NWS alerts for ${location.zip}.</div>`;
       document.querySelector("#updatedStamp").textContent = "Fetching model data";
