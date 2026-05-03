@@ -301,12 +301,12 @@
       border-color: rgba(80, 62, 140, 0.18);
     }
 
-    .icon-wrap.day:not(.rainy):not(.snowy):not(.icy):not(.stormy) {
+    .icon-wrap.day {
       background: #57B9FF;
       border-color: rgba(36, 112, 172, 0.28);
     }
 
-    .icon-wrap.night:not(.rainy):not(.snowy):not(.icy):not(.stormy) {
+    .icon-wrap.night {
       background: #560591;
       border-color: rgba(86, 5, 145, 0.38);
     }
@@ -564,17 +564,37 @@
     }
 
     .music-panel {
-      margin: 14px 0 0;
-      display: grid;
-      gap: 7px;
-      max-width: 420px;
-      color: var(--muted);
-      font-size: 0.82rem;
+      margin-top: 8px;
+      justify-self: end;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
     .music-panel audio {
-      width: 100%;
-      height: 34px;
+      display: none;
+    }
+
+    .music-toggle {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--ink);
+      padding: 6px 10px;
+      cursor: pointer;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .music-toggle:hover,
+    .music-toggle:focus-visible {
+      border-color: #1f7a64;
+      outline: none;
+    }
+
+    .music-volume {
+      width: 92px;
+      accent-color: #1f7a64;
     }
 
     .prob.severe .prob-head {
@@ -786,6 +806,10 @@
         min-width: 0;
       }
 
+      .music-panel {
+        justify-self: start;
+      }
+
       .forecast-grid {
         grid-template-columns: 1fr;
       }
@@ -841,6 +865,11 @@
         <span>Today</span>
         <strong id="todayStamp">Loading...</strong>
         <span id="updatedStamp">Fetching model data</span>
+        <section class="music-panel" aria-label="Background music">
+          <audio id="forecastAudio" autoplay loop preload="auto" playsinline src="assets/audio/local-forecast-nighttime.mp3"></audio>
+          <button class="music-toggle" id="musicToggle" type="button" aria-label="Play or pause background music">Play</button>
+          <input class="music-volume" id="musicVolume" type="range" aria-label="Background music volume" min="0" max="1" step="0.01" value="0.45">
+        </section>
       </div>
     </header>
 
@@ -869,11 +898,6 @@
 
     <section id="status" class="loading">Loading 7 days of model data...</section>
     <section class="forecast-grid" id="forecastGrid" aria-live="polite"></section>
-
-    <section class="music-panel" aria-label="Background music">
-      <span>Local Forecast background music</span>
-      <audio controls autoplay loop preload="metadata" src="assets/audio/local-forecast-nighttime.mp3"></audio>
-    </section>
 
     <footer>
       <p class="source-note">Forecast cards use computer model guidance from Open-Meteo. The NBM mode uses NOAA/NCEP NBM only; the blend mode uses HRRR/GFS, NAM, and NBM for days 1-2, then NBM only for days 3-7. The NWS feed is used only for active watches, warnings, advisories, and statements.</p>
@@ -1026,9 +1050,13 @@
     const dialogTitle = document.querySelector("#dialogTitle");
     const dialogHeadline = document.querySelector("#dialogHeadline");
     const dialogBody = document.querySelector("#dialogBody");
+    const forecastAudio = document.querySelector("#forecastAudio");
+    const musicToggle = document.querySelector("#musicToggle");
+    const musicVolume = document.querySelector("#musicVolume");
 
     document.querySelector("#todayStamp").textContent = formatFullDate(new Date());
     document.querySelector("#closeDialog").addEventListener("click", () => dialog.close());
+    setupMusicControls();
     document.querySelectorAll("[data-location]").forEach((button) => {
       button.addEventListener("click", () => {
         const next = locations.find((location) => location.zip === button.dataset.location);
@@ -1057,6 +1085,43 @@
       { codes: [71, 73, 75, 77, 85, 86], label: "Snow", kind: "snow" },
       { codes: [95, 96, 99], label: "Thunderstorms", kind: "storm" }
     ];
+
+    function setupMusicControls() {
+      if (!forecastAudio || !musicToggle || !musicVolume) return;
+
+      forecastAudio.volume = Number(musicVolume.value);
+      forecastAudio.loop = true;
+
+      const syncMusicButton = () => {
+        musicToggle.textContent = forecastAudio.paused ? "Play" : "Pause";
+        musicToggle.setAttribute("aria-pressed", String(!forecastAudio.paused));
+      };
+
+      const playMusic = () => forecastAudio.play()
+        .then(syncMusicButton)
+        .catch(syncMusicButton);
+
+      musicToggle.addEventListener("click", () => {
+        if (forecastAudio.paused) playMusic();
+        else forecastAudio.pause();
+      });
+
+      musicVolume.addEventListener("input", () => {
+        forecastAudio.volume = Number(musicVolume.value);
+      });
+
+      forecastAudio.addEventListener("play", syncMusicButton);
+      forecastAudio.addEventListener("pause", syncMusicButton);
+      window.addEventListener("pointerdown", () => {
+        if (forecastAudio.paused) playMusic();
+      }, { once: true });
+      window.addEventListener("keydown", () => {
+        if (forecastAudio.paused) playMusic();
+      }, { once: true });
+
+      playMusic();
+      syncMusicButton();
+    }
 
     const rainyKinds = new Set(["rain"]);
     const snowyKinds = new Set(["snow"]);
