@@ -143,6 +143,10 @@
     }
 
     .current-temp strong {
+      display: inline-block;
+      padding: 2px 6px 3px;
+      border-radius: 5px;
+      background: var(--temp-bg, transparent);
       color: var(--temp-color, #4b0082);
       font-size: 1.55rem;
       text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
@@ -964,6 +968,12 @@
     }
 
     .temp .value {
+      width: fit-content;
+      max-width: 100%;
+      margin-left: -5px;
+      padding: 2px 5px 3px;
+      border-radius: 5px;
+      background: var(--temp-bg, transparent);
       color: var(--temp-color, currentColor);
     }
 
@@ -2686,6 +2696,12 @@
       return interpolateBandColor(range, ratio);
     }
 
+    function temperatureTextBackground(value) {
+      if (!Number.isFinite(value)) return "transparent";
+      const displayed = Math.round(value);
+      return displayed >= 56 && displayed <= 65 ? "#edf0f2" : "transparent";
+    }
+
     function interpolateBandColor(range, ratio) {
       const eased = smoothstep(Math.max(0, Math.min(1, ratio)));
       if (eased <= 0.5) {
@@ -2825,7 +2841,7 @@
             <img class="weather-icon-img" src="${escapeAttribute(summary.weather.iconUrl)}" alt="${escapeAttribute(summary.weather.label)}">
           </div>
           <div class="condition">${escapeHtml(conditionText(summary))}</div>
-          <div class="temp${tempRecordClass(summary)}" style="--temp-color: ${temperatureColor(summary.temp)}"${tempRecordTitle(summary)}>
+          <div class="temp${tempRecordClass(summary)}" style="--temp-color: ${temperatureColor(summary.temp)}; --temp-bg: ${temperatureTextBackground(summary.temp)}"${tempRecordTitle(summary)}>
             <span class="label">${summary.tempLabel} Temp</span>
             <span class="value">${roundTemp(summary.temp)}</span>
             ${tempRecordNote(summary)}
@@ -2974,7 +2990,7 @@
           <strong>${escapeHtml(data.condition)}</strong>
           <span>${escapeHtml(data.station || "NWS observation")} | ${escapeHtml(formatObservationTime(data.timestamp))}</span>
         </div>
-        ${currentMetric("Temperature", formatCurrentTemp(data.temperature), "current-temp", `--temp-color: ${temperatureColor(data.temperature)}`)}
+        ${currentMetric("Temperature", formatCurrentTemp(data.temperature), "current-temp", `--temp-color: ${temperatureColor(data.temperature)}; --temp-bg: ${temperatureTextBackground(data.temperature)}`)}
         ${currentMetric("Humidity", formatCurrentHumidity(data.humidity))}
         ${currentMetric("Wind", `${formatWindSpeed(data.windSpeed)} ${formatWindDirection(data.windDirection)}${windArrow(data.windDirection)}`)}
         ${currentMetric("Dew Point", formatCurrentTemp(data.dewpoint))}
