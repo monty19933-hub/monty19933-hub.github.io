@@ -688,6 +688,25 @@
       outline: none;
     }
 
+    .day-alerts-wrap {
+      border-top: 1px solid var(--line);
+      padding-top: 10px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .day-alerts-title {
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 850;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .day-alerts {
+      grid-template-columns: repeat(auto-fit, minmax(136px, 1fr));
+    }
+
     .hourly-alerts {
       grid-column: 1 / -1;
     }
@@ -2453,7 +2472,6 @@
     }
 
     function renderPeriod(summary) {
-      const alerts = alertsForInterval(summary.startTime, summary.endTime);
       return `
         <section class="period ${summary.period}">
           <div class="period-title">
@@ -2463,7 +2481,6 @@
             <img class="weather-icon-img" src="${escapeAttribute(summary.weather.iconUrl)}" alt="${escapeAttribute(summary.weather.label)}">
           </div>
           <div class="condition">${escapeHtml(conditionText(summary))}</div>
-          ${renderInlineAlerts(alerts)}
           <div class="temp${tempRecordClass(summary)}"${tempRecordTitle(summary)}>
             <span class="label">${summary.tempLabel} Temp</span>
             <span class="value">${roundTemp(summary.temp)}</span>
@@ -2500,6 +2517,17 @@
               </button>
             `;
           }).join("")}
+        </div>
+      `;
+    }
+
+    function renderDayAlerts(isoDate) {
+      const alerts = alertsForInterval(`${isoDate}T00:00`, addHoursToLocalIso(`${isoDate}T00:00`, 24));
+      if (!alerts.length) return "";
+      return `
+        <div class="day-alerts-wrap">
+          <div class="day-alerts-title">NWS Alerts</div>
+          ${renderInlineAlerts(alerts, "day-alerts")}
         </div>
       `;
     }
@@ -2571,6 +2599,7 @@
               ${renderPeriod(day)}
               ${renderPeriod(night)}
             </div>
+            ${renderDayAlerts(isoDate)}
             ${index < 3 ? `<button class="hourly-open" type="button" data-hourly-date="${escapeAttribute(isoDate)}">Hourly Details</button>` : ""}
           </article>
         `;
