@@ -452,7 +452,7 @@
       content: "";
       position: absolute;
       inset: -18px 0 0;
-      z-index: 3;
+      z-index: 1;
       opacity: 0.5;
       pointer-events: none;
       --rain-a: 36px;
@@ -495,7 +495,7 @@
       content: "";
       position: absolute;
       inset: -20px 0 0;
-      z-index: 3;
+      z-index: 1;
       opacity: 0.4;
       pointer-events: none;
       --snow-a: 72px;
@@ -539,7 +539,7 @@
       content: "";
       position: absolute;
       inset: -16px 8px 0;
-      z-index: 3;
+      z-index: 1;
       opacity: 0.62;
       pointer-events: none;
       --ice-a: 28px;
@@ -651,6 +651,17 @@
       font-size: 0.78rem;
       line-height: 1.1;
       white-space: nowrap;
+    }
+
+    .wind-arrow {
+      display: inline-grid;
+      place-items: center;
+      width: 1.1em;
+      height: 1.1em;
+      margin-left: 3px;
+      color: #225f8f;
+      transform: rotate(var(--wind-to, 0deg));
+      transform-origin: center;
     }
 
     .label {
@@ -773,6 +784,107 @@
 
     .prob.severe .track {
       height: 5px;
+    }
+
+    .hourly-open {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 9px 10px;
+      background: #ffffff;
+      color: #1f5f86;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .hourly-open:hover,
+    .hourly-open:focus-visible {
+      border-color: #1f7a64;
+      outline: none;
+    }
+
+    .hourly-dialog {
+      width: min(980px, calc(100% - 28px));
+    }
+
+    .hourly-list {
+      display: grid;
+      gap: 10px;
+      max-height: min(68vh, 720px);
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .hourly-row {
+      display: grid;
+      grid-template-columns: 72px 58px minmax(112px, 1fr) minmax(150px, 1.25fr) minmax(128px, 0.9fr);
+      gap: 10px;
+      align-items: center;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcfc;
+    }
+
+    .hourly-time {
+      display: grid;
+      gap: 2px;
+      font-weight: 800;
+    }
+
+    .hourly-time span {
+      color: var(--muted);
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    .hourly-icon {
+      width: 54px;
+      height: 54px;
+      border-radius: 7px;
+    }
+
+    .hourly-icon .weather-icon-img {
+      width: 48px;
+      height: 48px;
+    }
+
+    .hourly-condition {
+      display: grid;
+      gap: 3px;
+      font-weight: 800;
+      line-height: 1.15;
+    }
+
+    .hourly-condition .value {
+      margin-top: 0;
+      font-size: 1.18rem;
+    }
+
+    .hourly-metrics,
+    .hourly-wind {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px;
+    }
+
+    .hourly-wind {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .metric-pill {
+      display: grid;
+      gap: 1px;
+      min-width: 0;
+      padding: 6px;
+      border: 1px solid rgba(80, 96, 112, 0.16);
+      border-radius: 6px;
+      background: #fff;
+    }
+
+    .metric-pill strong {
+      font-size: 0.82rem;
+      white-space: nowrap;
     }
 
     .fill {
@@ -1014,6 +1126,15 @@
       .detail-grid {
         grid-template-columns: 1fr;
       }
+
+      .hourly-row {
+        grid-template-columns: 64px 52px minmax(0, 1fr);
+      }
+
+      .hourly-metrics,
+      .hourly-wind {
+        grid-column: 1 / -1;
+      }
     }
 
     @media (max-width: 560px) {
@@ -1026,6 +1147,20 @@
         border-top: 1px solid var(--line);
         padding-left: 0;
         padding-top: 14px;
+      }
+
+      .hourly-row {
+        grid-template-columns: 1fr;
+      }
+
+      .hourly-icon {
+        width: 64px;
+        height: 64px;
+      }
+
+      .hourly-icon .weather-icon-img {
+        width: 56px;
+        height: 56px;
       }
     }
   </style>
@@ -1107,6 +1242,17 @@
     <div class="dialog-body" id="dialogBody"></div>
   </dialog>
 
+  <dialog class="hourly-dialog" id="hourlyDialog">
+    <div class="dialog-head">
+      <div>
+        <h3 id="hourlyDialogTitle">Hourly Forecast</h3>
+        <p class="source-note" id="hourlyDialogSubtitle"></p>
+      </div>
+      <button class="close" id="closeHourlyDialog" aria-label="Close hourly forecast">&times;</button>
+    </div>
+    <div class="dialog-body" id="hourlyDialogBody"></div>
+  </dialog>
+
   <script>
     const favoriteStorageKey = "modelForecastFavorites.v1";
     const stateAbbreviations = {
@@ -1155,6 +1301,7 @@
     let point = locations[0];
     let forecastUrl = "";
     let alertsUrl = "";
+    let currentForecastData = null;
 
     const modelModes = {
       blend: {
@@ -1243,6 +1390,10 @@
     const dialogTitle = document.querySelector("#dialogTitle");
     const dialogHeadline = document.querySelector("#dialogHeadline");
     const dialogBody = document.querySelector("#dialogBody");
+    const hourlyDialog = document.querySelector("#hourlyDialog");
+    const hourlyDialogTitle = document.querySelector("#hourlyDialogTitle");
+    const hourlyDialogSubtitle = document.querySelector("#hourlyDialogSubtitle");
+    const hourlyDialogBody = document.querySelector("#hourlyDialogBody");
     const forecastAudio = document.querySelector("#forecastAudio");
     const musicToggle = document.querySelector("#musicToggle");
     const musicVolume = document.querySelector("#musicVolume");
@@ -1255,9 +1406,14 @@
 
     document.querySelector("#todayStamp").textContent = formatFullDate(new Date());
     document.querySelector("#closeDialog").addEventListener("click", () => dialog.close());
+    document.querySelector("#closeHourlyDialog").addEventListener("click", () => hourlyDialog.close());
     setupMusicControls();
     renderFavorites();
     setupLocationControls();
+    grid.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-hourly-date]");
+      if (button) openHourlyDialog(button.dataset.hourlyDate);
+    });
 
     function locationKey(location) {
       if (location.zip) return `zip:${location.zip}`;
@@ -1707,6 +1863,14 @@
       };
     }
 
+    function formatHourlyTime(value) {
+      const match = String(value || "").match(/T(\d{2})/);
+      if (!match) return "--";
+      const hour = Number(match[1]);
+      const hour12 = hour % 12 || 12;
+      return `${hour12} ${hour < 12 ? "AM" : "PM"}`;
+    }
+
     function withPointTimeZone(options) {
       if (!point.timezone || point.timezone === "auto") return options;
       return { ...options, timeZone: point.timezone };
@@ -1731,6 +1895,17 @@
         if (String(times[index]).startsWith(isoDate) && Number(dayFlags[index]) === expectedFlag) {
           indices.push(index);
         }
+      }
+
+      return indices;
+    }
+
+    function hourlyIndicesForDay(hourly, isoDate) {
+      const times = hourly.time || [];
+      const indices = [];
+
+      for (let index = 0; index < times.length; index += 1) {
+        if (String(times[index]).startsWith(isoDate)) indices.push(index);
       }
 
       return indices;
@@ -1862,6 +2037,46 @@
       };
     }
 
+    function hourlySummary(data, index) {
+      const hourly = data.hourly || {};
+      const isDaytime = Number(hourly.is_day?.[index]) === 1;
+      const period = isDaytime ? "day" : "night";
+      const windSpeed = Number(hourly.wind_speed_10m?.[index]);
+      const windGust = Number(hourly.wind_gusts_10m?.[index]);
+      const windDirection = Number(hourly.wind_direction_10m?.[index]);
+      const cape = Number(hourly.cape?.[index]);
+      const rainAmount = Number(hourly.rain?.[index]) || 0;
+      const snowAmount = Number(hourly.snowfall?.[index]) || 0;
+      const thunder = clampPercent(Number(hourly.thunderstorm_probability?.[index]) || 0);
+      const rain = clampPercent(Number(hourly.rain_probability?.[index]) || 0);
+      const snow = clampPercent(Number(hourly.snowfall_probability?.[index]) || 0);
+      const severe = severeChance(thunder, cape, windGust, rainAmount);
+      const code = representativeWeatherCode(
+        Number(hourly.weather_code?.[index]),
+        { thunder, rain, snow, rainAmount, snowAmount }
+      );
+      const weather = weatherFor(code, period, { windSpeed, windGust, rain, rainAmount, snow, snowAmount, thunder, severe });
+
+      return {
+        period,
+        title: formatHourlyTime(hourly.time?.[index]),
+        tempLabel: "Hourly",
+        temp: Number(hourly.temperature_2m?.[index]),
+        code,
+        weather,
+        rain,
+        rainAmount,
+        snow,
+        snowAmount,
+        thunder,
+        severe,
+        windSpeed,
+        windGust,
+        windDirection,
+        cape
+      };
+    }
+
     function representativeWeatherCode(baseCode, metrics) {
       const thunder = clampPercent(metrics.thunder);
       const rain = clampPercent(metrics.rain);
@@ -1913,6 +2128,13 @@
       return compassDirection(value);
     }
 
+    function windArrow(value) {
+      if (!Number.isFinite(value)) return "";
+      const windTo = (value + 180) % 360;
+      const label = compassDirection(windTo);
+      return `<span class="wind-arrow" style="--wind-to: ${windTo}deg" title="Wind moving ${escapeAttribute(label)}" aria-label="Wind moving ${escapeAttribute(label)}">&uarr;</span>`;
+    }
+
     function compassDirection(value) {
       const directions = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
       return directions[Math.round((((value % 360) + 360) % 360) / 22.5) % directions.length];
@@ -1923,7 +2145,7 @@
         <div class="wind-summary" aria-label="${escapeAttribute(summary.title)} wind forecast">
           <div class="wind-item"><span class="label">Wind</span><strong>${formatWindSpeed(summary.windSpeed)}</strong></div>
           <div class="wind-item"><span class="label">Gusts</span><strong>${formatWindSpeed(summary.windGust)}</strong></div>
-          <div class="wind-item"><span class="label">Dir</span><strong>${formatWindDirection(summary.windDirection)}</strong></div>
+          <div class="wind-item"><span class="label">Dir</span><strong>${formatWindDirection(summary.windDirection)}${windArrow(summary.windDirection)}</strong></div>
         </div>
       `;
     }
@@ -2018,7 +2240,53 @@
       `;
     }
 
+    function hourlyMetric(label, value) {
+      return `<span class="metric-pill"><span class="label">${escapeHtml(label)}</span><strong>${value}</strong></span>`;
+    }
+
+    function renderHourlyRow(summary) {
+      return `
+        <article class="hourly-row">
+          <div class="hourly-time">${escapeHtml(summary.title)}<span>${summary.period === "day" ? "Daytime" : "Nighttime"}</span></div>
+          <div class="icon-wrap hourly-icon ${summary.period} ${escapeAttribute(summary.weather.iconClass)}">
+            <img class="weather-icon-img" src="${escapeAttribute(summary.weather.iconUrl)}" alt="${escapeAttribute(summary.weather.label)}">
+          </div>
+          <div class="hourly-condition">
+            <span class="value">${roundTemp(summary.temp)}</span>
+            <span>${escapeHtml(conditionText(summary))}</span>
+          </div>
+          <div class="hourly-metrics">
+            ${hourlyMetric("Chance of Rain", `${clampPercent(summary.rain)}%`)}
+            ${hourlyMetric("Rain Amount", formatAmount(summary.rainAmount))}
+            ${hourlyMetric("Chance of Snow", `${clampPercent(summary.snow)}%`)}
+            ${hourlyMetric("Snow Amount", formatAmount(summary.snowAmount))}
+            ${hourlyMetric("Chance of Thunderstorms", `${clampPercent(summary.thunder)}%`)}
+            ${hourlyMetric("Severe Chance", `${clampPercent(summary.severe)}%`)}
+          </div>
+          <div class="hourly-wind">
+            ${hourlyMetric("Wind", formatWindSpeed(summary.windSpeed))}
+            ${hourlyMetric("Gusts", formatWindSpeed(summary.windGust))}
+            ${hourlyMetric("Dir", `${formatWindDirection(summary.windDirection)}${windArrow(summary.windDirection)}`)}
+          </div>
+        </article>
+      `;
+    }
+
+    function openHourlyDialog(isoDate) {
+      if (!currentForecastData) return;
+      const indices = hourlyIndicesForDay(currentForecastData.hourly || {}, isoDate);
+      const dateBits = formatShortDate(isoDate);
+
+      hourlyDialogTitle.textContent = `${dateBits.weekday} ${dateBits.date} Hourly Forecast`;
+      hourlyDialogSubtitle.textContent = `${locationDisplay(point)} hourly model details`;
+      hourlyDialogBody.innerHTML = indices.length
+        ? `<div class="hourly-list">${indices.map((index) => renderHourlyRow(hourlySummary(currentForecastData, index))).join("")}</div>`
+        : `<p>No hourly model data is available for this day.</p>`;
+      hourlyDialog.showModal();
+    }
+
     function renderForecast(data, recordExtremes = {}) {
+      currentForecastData = data;
       const days = data.daily.time || [];
       const todayIso = new Intl.DateTimeFormat("en-CA", withPointTimeZone({
         year: "numeric",
@@ -2041,6 +2309,7 @@
               ${renderPeriod(day)}
               ${renderPeriod(night)}
             </div>
+            ${index < 3 ? `<button class="hourly-open" type="button" data-hourly-date="${escapeAttribute(isoDate)}">Hourly Details</button>` : ""}
           </article>
         `;
       }).join("");
@@ -2335,6 +2604,7 @@
 
     function setLocation(location) {
       point = location;
+      currentForecastData = null;
       forecastUrl = buildForecastUrl(location);
       alertsUrl = buildAlertsUrl(location);
       const modeConfig = modelModes.blend;
