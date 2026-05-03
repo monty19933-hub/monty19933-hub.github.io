@@ -364,10 +364,68 @@
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       grid-template-rows: auto 112px minmax(44px, auto) auto auto 1fr;
-      column-gap: 12px;
+      column-gap: 24px;
       row-gap: 10px;
       min-width: 0;
       align-items: stretch;
+    }
+
+    @media (min-width: 561px) {
+      .periods {
+        position: relative;
+      }
+
+      .periods::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 50%;
+        width: 1px;
+        background: var(--line);
+        pointer-events: none;
+      }
+
+      .period {
+        display: contents;
+      }
+
+      .period + .period {
+        border-left: 0;
+        padding-left: 0;
+      }
+
+      .period.day > * {
+        grid-column: 1;
+      }
+
+      .period.night > * {
+        grid-column: 2;
+      }
+
+      .period > .period-title {
+        grid-row: 1;
+      }
+
+      .period > .icon-wrap {
+        grid-row: 2;
+      }
+
+      .period > .condition {
+        grid-row: 3;
+      }
+
+      .period > .temp {
+        grid-row: 4;
+      }
+
+      .period > .wind-summary {
+        grid-row: 5;
+      }
+
+      .period > .probabilities {
+        grid-row: 6;
+      }
     }
 
     .period {
@@ -389,6 +447,17 @@
     .period + .period {
       border-left: 1px solid var(--line);
       padding-left: 12px;
+    }
+
+    @media (min-width: 561px) {
+      .period {
+        display: contents;
+      }
+
+      .period + .period {
+        border-left: 0;
+        padding-left: 0;
+      }
     }
 
     .period-title {
@@ -1315,7 +1384,8 @@
 
       .periods {
         grid-template-rows: auto 104px minmax(44px, auto) auto auto 1fr;
-        gap: 10px;
+        column-gap: 20px;
+        row-gap: 10px;
       }
 
       .period {
@@ -1349,6 +1419,18 @@
       .periods {
         grid-template-columns: 1fr;
         grid-template-rows: none;
+      }
+
+      .periods::before {
+        display: none;
+      }
+
+      .period {
+        display: grid;
+      }
+
+      .period.night > * {
+        grid-column: auto;
       }
 
       @supports (grid-template-rows: subgrid) {
