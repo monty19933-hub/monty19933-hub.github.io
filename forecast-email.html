@@ -1105,10 +1105,6 @@
       height: 5px;
     }
 
-    .prob.detail .track {
-      height: 5px;
-    }
-
     .hourly-open {
       width: 100%;
       border: 1px solid var(--line);
@@ -2861,11 +2857,9 @@
     }
 
     function snowLevelRow(value) {
-      const pct = snowLevelTrackPercent(value);
       return `
         <div class="prob detail">
           <div class="prob-head"><span>Snow Level</span><strong>${formatSnowLevel(value)}</strong></div>
-          <div class="track"><div class="fill snow-level" style="--pct: ${pct}%"></div></div>
         </div>
       `;
     }
@@ -2874,11 +2868,6 @@
       if (!Number.isFinite(value)) return "N/A";
       const rounded = Math.max(0, Math.round(value / 100) * 100);
       return `${rounded.toLocaleString("en-US")} ft`;
-    }
-
-    function snowLevelTrackPercent(value) {
-      if (!Number.isFinite(value)) return 0;
-      return Math.max(0, Math.min(100, Math.round((value / 12000) * 100)));
     }
 
     function conditionText(summary) {
