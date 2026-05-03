@@ -354,29 +354,37 @@
       z-index: 3;
       opacity: 0.5;
       pointer-events: none;
+      --rain-a: 36px;
+      --rain-b: 50px;
       background-image:
         radial-gradient(ellipse at 50% 45%, rgba(34, 111, 185, 0.95) 0 2.4px, transparent 3px),
         radial-gradient(ellipse at 50% 45%, rgba(64, 143, 205, 0.78) 0 1.8px, transparent 2.5px);
-      background-size: 30px 36px, 44px 50px;
+      background-size: 30px var(--rain-a), 44px var(--rain-b);
       background-position: 0 0, 13px 9px;
       animation: rain-drops 1.35s linear infinite;
     }
 
     .icon-wrap.rain-chance::after {
       opacity: 0.34;
-      background-size: 48px 56px, 68px 74px;
+      --rain-a: 56px;
+      --rain-b: 74px;
+      background-size: 48px var(--rain-a), 68px var(--rain-b);
       animation-duration: 1.9s;
     }
 
     .icon-wrap.rain-steady::after {
       opacity: 0.56;
-      background-size: 30px 36px, 42px 50px;
+      --rain-a: 36px;
+      --rain-b: 50px;
+      background-size: 30px var(--rain-a), 42px var(--rain-b);
       animation-duration: 1.12s;
     }
 
     .icon-wrap.rain-heavy::after {
       opacity: 0.76;
-      background-size: 22px 28px, 31px 38px;
+      --rain-a: 28px;
+      --rain-b: 38px;
+      background-size: 22px var(--rain-a), 31px var(--rain-b);
       animation-duration: 0.72s;
     }
 
@@ -385,33 +393,41 @@
       position: absolute;
       inset: -20px 0 0;
       z-index: 3;
-      opacity: 0.62;
+      opacity: 0.4;
       pointer-events: none;
+      --snow-a: 72px;
+      --snow-b: 96px;
       background-image:
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='%236a9fc7' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M12 3v18M5 7l14 10M19 7L5 17M8 4l4 4 4-4M8 20l4-4 4 4'/%3E%3C/g%3E%3C/svg%3E"),
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M12 4v16M6 8l12 8M18 8L6 16'/%3E%3C/g%3E%3C/svg%3E");
-      background-size: 22px 22px, 32px 32px;
-      background-position: 0 0, 12px 8px;
-      animation: snow-fall 3.4s linear infinite;
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cg fill='none' stroke='%236a9fc7' stroke-width='2.3' stroke-linecap='round'%3E%3Cpath d='M32 22v20M24 26l16 12M40 26L24 38M27 23l5 5 5-5M27 41l5-5 5 5'/%3E%3C/g%3E%3C/svg%3E"),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cg fill='none' stroke='%23ffffff' stroke-width='2.1' stroke-linecap='round'%3E%3Cpath d='M32 24v16M26 28l12 8M38 28L26 36'/%3E%3C/g%3E%3C/svg%3E");
+      background-size: 56px var(--snow-a), 74px var(--snow-b);
+      background-position: 0 0, 18px 12px;
+      animation: snow-fall 5.2s linear infinite;
     }
 
     .icon-wrap.snow-flurries::after,
     .icon-wrap.snow-chance::after {
-      opacity: 0.32;
-      background-size: 36px 36px, 52px 52px;
-      animation-duration: 5.4s;
+      opacity: 0.22;
+      --snow-a: 96px;
+      --snow-b: 128px;
+      background-size: 78px var(--snow-a), 104px var(--snow-b);
+      animation-duration: 8.2s;
     }
 
     .icon-wrap.snow-steady::after {
-      opacity: 0.58;
-      background-size: 23px 23px, 34px 34px;
-      animation-duration: 3.5s;
+      opacity: 0.4;
+      --snow-a: 76px;
+      --snow-b: 102px;
+      background-size: 60px var(--snow-a), 82px var(--snow-b);
+      animation-duration: 5.6s;
     }
 
     .icon-wrap.snow-heavy::after {
-      opacity: 0.78;
-      background-size: 17px 17px, 25px 25px;
-      animation-duration: 2.2s;
+      opacity: 0.58;
+      --snow-a: 54px;
+      --snow-b: 74px;
+      background-size: 42px var(--snow-a), 58px var(--snow-b);
+      animation-duration: 3.8s;
     }
 
     .icon-wrap.icy::after {
@@ -421,29 +437,37 @@
       z-index: 3;
       opacity: 0.62;
       pointer-events: none;
+      --ice-a: 28px;
+      --ice-b: 39px;
       background-image:
         radial-gradient(circle, rgba(172, 210, 231, 0.95) 0 2.1px, transparent 2.8px),
         radial-gradient(circle, rgba(245, 252, 255, 0.95) 0 1.4px, transparent 2.1px);
-      background-size: 24px 28px, 34px 39px;
+      background-size: 24px var(--ice-a), 34px var(--ice-b);
       background-position: 0 0, 13px 9px;
       animation: ice-fall 1.65s linear infinite;
     }
 
     .icon-wrap.ice-chance::after {
       opacity: 0.42;
-      background-size: 38px 45px, 56px 62px;
+      --ice-a: 45px;
+      --ice-b: 62px;
+      background-size: 38px var(--ice-a), 56px var(--ice-b);
       animation-duration: 2.3s;
     }
 
     .icon-wrap.ice-steady::after {
       opacity: 0.68;
-      background-size: 22px 28px, 32px 39px;
+      --ice-a: 28px;
+      --ice-b: 39px;
+      background-size: 22px var(--ice-a), 32px var(--ice-b);
       animation-duration: 1.55s;
     }
 
     .icon-wrap.ice-heavy::after {
       opacity: 0.9;
-      background-size: 15px 20px, 24px 28px;
+      --ice-a: 20px;
+      --ice-b: 28px;
+      background-size: 15px var(--ice-a), 24px var(--ice-b);
       animation-duration: 0.95s;
     }
 
@@ -633,18 +657,18 @@
     }
 
     @keyframes rain-drops {
-      from { background-position: 0 -34px, 13px -22px; }
-      to { background-position: 0 36px, 13px 48px; }
+      from { background-position: 0 0, 13px 9px; }
+      to { background-position: 0 var(--rain-a), 13px calc(9px + var(--rain-b)); }
     }
 
     @keyframes snow-fall {
-      from { background-position: 0 -34px, 12px -22px; }
-      to { background-position: 0 44px, 12px 56px; }
+      from { background-position: 0 0, 18px 12px; }
+      to { background-position: 0 var(--snow-a), 18px calc(12px + var(--snow-b)); }
     }
 
     @keyframes ice-fall {
-      from { background-position: 0 -32px, 13px -20px; }
-      to { background-position: 0 36px, 13px 48px; }
+      from { background-position: 0 0, 13px 9px; }
+      to { background-position: 0 var(--ice-a), 13px calc(9px + var(--ice-b)); }
     }
 
     @keyframes storm-flash {
