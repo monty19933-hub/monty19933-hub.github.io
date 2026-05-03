@@ -2680,7 +2680,7 @@
         { min: 86, max: 99, from: "#b91c1c", mid: "#ef4444", to: "#f36484" },
         { min: 100, max: 150, from: "#be176f", mid: "#ec4899", to: "#ff9ad5" }
       ];
-      const clamped = Math.max(-150, Math.min(150, value));
+      const clamped = Math.max(-150, Math.min(150, Math.round(value)));
       const range = ranges.find((candidate) => clamped >= candidate.min && clamped <= candidate.max)
         || (clamped < 1 ? ranges[0] : ranges[ranges.length - 1]);
       const ratio = range.max === range.min ? 1 : (clamped - range.min) / (range.max - range.min);
