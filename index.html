@@ -517,6 +517,18 @@
       background: #fbfcfc;
     }
 
+    .temp.record-high {
+      border-color: rgba(194, 59, 34, 0.62);
+      background: #ffe5df;
+      box-shadow: inset 0 0 0 1px rgba(194, 59, 34, 0.16);
+    }
+
+    .temp.record-low {
+      border-color: rgba(47, 120, 183, 0.62);
+      background: #e5f0ff;
+      box-shadow: inset 0 0 0 1px rgba(47, 120, 183, 0.16);
+    }
+
     .label {
       color: var(--muted);
       font-size: 0.72rem;
@@ -530,6 +542,22 @@
       font-size: 1.38rem;
       font-weight: 800;
       line-height: 1;
+    }
+
+    .record-note {
+      display: block;
+      margin-top: 5px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      line-height: 1.15;
+    }
+
+    .temp.record-high .record-note {
+      color: #9c2e1b;
+    }
+
+    .temp.record-low .record-note {
+      color: #225f8f;
     }
 
     .probabilities {
@@ -569,6 +597,13 @@
       display: flex;
       align-items: center;
       gap: 8px;
+    }
+
+    .music-label {
+      color: var(--muted);
+      font-size: 0.76rem;
+      font-weight: 800;
+      white-space: nowrap;
     }
 
     .music-panel audio {
@@ -866,6 +901,7 @@
         <strong id="todayStamp">Loading...</strong>
         <span id="updatedStamp">Fetching model data</span>
         <section class="music-panel" aria-label="Background music">
+          <span class="music-label">Music Controls</span>
           <audio id="forecastAudio" autoplay loop preload="auto" playsinline src="assets/audio/local-forecast-nighttime.mp3"></audio>
           <button class="music-toggle" id="musicToggle" type="button" aria-label="Play or pause background music">Play</button>
           <input class="music-volume" id="musicVolume" type="range" aria-label="Background music volume" min="0" max="1" step="0.01" value="0.45">
@@ -901,6 +937,7 @@
 
     <footer>
       <p class="source-note">Forecast cards use computer model guidance from Open-Meteo. The NBM mode uses NOAA/NCEP NBM only; the blend mode uses HRRR/GFS, NAM, and NBM for days 1-2, then NBM only for days 3-7. The NWS feed is used only for active watches, warnings, advisories, and statements.</p>
+      <p class="source-note">Potential record high/low coloring compares the forecast temperature against Open-Meteo historical reanalysis daily extremes from 1991 through last year for the same point location and calendar date.</p>
       <p class="source-note">Severe Chance is a model-derived proxy from thunderstorm probability, CAPE, wind gusts, and rain amount; it is not an official severe weather outlook.</p>
       <p class="source-note icon-credit">Icons use the local 98-06 TWC icon pack you provided, with motion added only for rain, snow, thunderstorm, and wind states.</p>
       <p class="source-note">
@@ -908,6 +945,7 @@
         <a id="modelLink" href="#" target="_blank" rel="noreferrer">model JSON</a>,
         <a id="alertsLink" href="#" target="_blank" rel="noreferrer">NWS alert JSON</a>,
         <a href="https://open-meteo.com/en/docs/gfs-api" target="_blank" rel="noreferrer">Open-Meteo GFS/NBM docs</a>,
+        <a href="https://open-meteo.com/en/docs/historical-weather-api" target="_blank" rel="noreferrer">Open-Meteo historical reanalysis docs</a>,
         <a href="https://www.weather.gov/documentation/services-web-alerts" target="_blank" rel="noreferrer">NWS alerts docs</a>,
         <a href="https://www.deviantart.com/malekmasoud/art/98-06-TWC-Icon-Mega-Pack-CHRISTMAS-UPDATE-1277563023" target="_blank" rel="noreferrer">local 98-06 TWC icon pack source</a>.
       </p>
@@ -1040,6 +1078,23 @@
 
     function buildAlertsUrl(location) {
       return `https://api.weather.gov/alerts/active?point=${location.latitude},${location.longitude}`;
+    }
+
+    function buildRecordUrl(location) {
+      const currentYear = new Date().getFullYear();
+      const startYear = 1991;
+      const endYear = Math.max(startYear, currentYear - 1);
+      const params = new URLSearchParams({
+        latitude: location.latitude,
+        longitude: location.longitude,
+        timezone: location.timezone,
+        temperature_unit: "fahrenheit",
+        start_date: `${startYear}-01-01`,
+        end_date: `${endYear}-12-31`,
+        daily: "temperature_2m_max,temperature_2m_min"
+      });
+
+      return `https://archive-api.open-meteo.com/v1/archive?${params.toString()}`;
     }
 
     const grid = document.querySelector("#forecastGrid");
@@ -1444,6 +1499,39 @@
       return summary.weather.label;
     }
 
+    function markPotentialRecord(summary, records, isDaytime) {
+      if (!records || !Number.isFinite(summary.temp)) return summary;
+      const threshold = 1;
+
+      if (isDaytime && Number.isFinite(records.high) && summary.temp >= records.high - threshold) {
+        return { ...summary, recordType: "high", recordValue: records.high };
+      }
+
+      if (!isDaytime && Number.isFinite(records.low) && summary.temp <= records.low + threshold) {
+        return { ...summary, recordType: "low", recordValue: records.low };
+      }
+
+      return summary;
+    }
+
+    function tempRecordClass(summary) {
+      if (summary.recordType === "high") return " record-high";
+      if (summary.recordType === "low") return " record-low";
+      return "";
+    }
+
+    function tempRecordNote(summary) {
+      if (!summary.recordType) return "";
+      const label = summary.recordType === "high" ? "Potential record high" : "Potential record low";
+      return `<span class="record-note">${label} ${roundTemp(summary.recordValue)}</span>`;
+    }
+
+    function tempRecordTitle(summary) {
+      if (!summary.recordType) return "";
+      const label = summary.recordType === "high" ? "potential record high" : "potential record low";
+      return ` title="${escapeAttribute(`Model forecast is within 1 degree of the ${label} from Open-Meteo historical reanalysis.`)}"`;
+    }
+
     function renderPeriod(summary) {
       return `
         <section class="period ${summary.period}">
@@ -1455,9 +1543,10 @@
             <img class="weather-icon-img" src="${escapeAttribute(summary.weather.iconUrl)}" alt="${escapeAttribute(summary.weather.label)}">
           </div>
           <div class="condition">${escapeHtml(conditionText(summary))}</div>
-          <div class="temp">
+          <div class="temp${tempRecordClass(summary)}"${tempRecordTitle(summary)}>
             <span class="label">${summary.tempLabel} Temp</span>
             <span class="value">${roundTemp(summary.temp)}</span>
+            ${tempRecordNote(summary)}
           </div>
           <div class="probabilities">
             ${probabilityRow("Chance of Rain", summary.rain, "rain", formatAmount(summary.rainAmount))}
@@ -1469,7 +1558,7 @@
       `;
     }
 
-    function renderForecast(data) {
+    function renderForecast(data, recordExtremes = {}) {
       const days = data.daily.time || [];
       const todayIso = new Intl.DateTimeFormat("en-CA", {
         timeZone: point.timezone,
@@ -1480,8 +1569,8 @@
 
       grid.innerHTML = days.map((isoDate, index) => {
         const dateBits = formatShortDate(isoDate);
-        const day = periodSummary(data, isoDate, index, true);
-        const night = periodSummary(data, isoDate, index, false);
+        const day = markPotentialRecord(periodSummary(data, isoDate, index, true), recordExtremes[isoDate], true);
+        const night = markPotentialRecord(periodSummary(data, isoDate, index, false), recordExtremes[isoDate], false);
 
         return `
           <article class="day-card ${isoDate === todayIso ? "today" : ""}">
@@ -1588,6 +1677,43 @@
         throw new Error(`${response.status} ${response.statusText}`);
       }
       return response.json();
+    }
+
+    async function fetchRecordExtremes(location, forecast) {
+      const forecastDays = forecast?.daily?.time || [];
+      if (!forecastDays.length) return {};
+
+      const wantedDates = new Map(forecastDays.map((isoDate) => [monthDayKey(isoDate), isoDate]));
+      const records = {};
+      forecastDays.forEach((isoDate) => {
+        records[isoDate] = { high: -Infinity, low: Infinity };
+      });
+
+      const archive = await fetchJson(buildRecordUrl(location));
+      const times = archive.daily?.time || [];
+      const highs = archive.daily?.temperature_2m_max || [];
+      const lows = archive.daily?.temperature_2m_min || [];
+
+      times.forEach((time, index) => {
+        const forecastIso = wantedDates.get(monthDayKey(time));
+        if (!forecastIso) return;
+
+        const high = Number(highs[index]);
+        const low = Number(lows[index]);
+        if (Number.isFinite(high)) records[forecastIso].high = Math.max(records[forecastIso].high, high);
+        if (Number.isFinite(low)) records[forecastIso].low = Math.min(records[forecastIso].low, low);
+      });
+
+      Object.keys(records).forEach((isoDate) => {
+        if (!Number.isFinite(records[isoDate].high)) delete records[isoDate].high;
+        if (!Number.isFinite(records[isoDate].low)) delete records[isoDate].low;
+      });
+
+      return records;
+    }
+
+    function monthDayKey(isoDate) {
+      return String(isoDate).slice(5, 10);
     }
 
     function buildBlendSources(location) {
@@ -1757,13 +1883,14 @@
         const forecastPromise = modelMode === "blend"
           ? fetchBlendForecast(point)
           : fetchJson(forecastUrl).then((data) => ({ ...data, modelLabel: point.modelSet === "gfs" ? "GFS" : modelModes.nbm.label }));
-        const [forecast, alerts] = await Promise.all([
-          forecastPromise,
+        const forecast = await forecastPromise;
+        const [recordExtremes, alerts] = await Promise.all([
+          fetchRecordExtremes(point, forecast).catch(() => ({})),
           fetchJson(alertsUrl, { headers: { Accept: "application/geo+json" } })
         ]);
 
         if (token !== loadToken) return;
-        renderForecast(forecast);
+        renderForecast(forecast, recordExtremes);
         renderAlerts(alerts);
       } catch (error) {
         if (token !== loadToken) return;
