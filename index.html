@@ -673,8 +673,8 @@
     </nav>
 
     <nav class="location-toggle model-toggle" aria-label="Forecast model source">
-      <button type="button" data-model-mode="nbm" aria-pressed="true">NBM</button>
-      <button type="button" data-model-mode="blend" aria-pressed="false">HRRR/NAM/GFS/NBM Blend</button>
+      <button type="button" data-model-mode="blend" aria-pressed="true">HRRR/NAM/GFS/NBM Blend</button>
+      <button type="button" data-model-mode="nbm" aria-pressed="false">NBM</button>
     </nav>
 
     <section class="alerts" aria-labelledby="alertsTitle">
@@ -746,7 +746,7 @@
     let point = locations[0];
     let forecastUrl = "";
     let alertsUrl = "";
-    let modelMode = "nbm";
+    let modelMode = "blend";
 
     const modelModes = {
       nbm: {
