@@ -344,19 +344,23 @@
       animation: sun-icon-pulse 2.6s ease-in-out infinite;
     }
 
-    .icon-wrap.rainy::after {
+    .icon-wrap.rainy::after,
+    .icon-wrap.stormy::after {
       content: "";
       position: absolute;
-      inset: 0;
-      z-index: 1;
-      opacity: 0.34;
-      background-image: repeating-linear-gradient(
-        110deg,
-        transparent 0 14px,
-        rgba(47, 120, 183, 0.8) 15px 17px,
-        transparent 18px 30px
-      );
-      animation: rain-fall 0.72s linear infinite;
+      left: 25%;
+      top: 45%;
+      width: 50%;
+      height: 52%;
+      z-index: 3;
+      opacity: 0.72;
+      clip-path: polygon(14% 0, 86% 0, 100% 100%, 0 100%);
+      background-image:
+        linear-gradient(180deg, rgba(42, 117, 185, 0.95) 0 62%, transparent 62%),
+        linear-gradient(180deg, rgba(42, 117, 185, 0.75) 0 58%, transparent 58%);
+      background-size: 10px 28px, 14px 34px;
+      background-position: 0 0, 7px 12px;
+      animation: rain-fall 0.78s linear infinite;
     }
 
     .icon-wrap.snowy::after {
@@ -542,8 +546,8 @@
     }
 
     @keyframes rain-fall {
-      from { background-position: 0 -30px; }
-      to { background-position: 0 30px; }
+      from { background-position: 0 -30px, 7px -18px; }
+      to { background-position: 0 30px, 7px 42px; }
     }
 
     @keyframes snow-fall {
@@ -694,6 +698,7 @@
       <button type="button" data-location="97067" aria-pressed="false">97067 Welches</button>
       <button type="button" data-location="97070" aria-pressed="false">97070 Wilsonville</button>
       <button type="button" data-location="75080" aria-pressed="false">75080 Richardson</button>
+      <button type="button" data-location="99639" aria-pressed="false">99639 Ninilchik</button>
     </nav>
 
     <nav class="location-toggle model-toggle" aria-label="Forecast model source">
@@ -715,7 +720,7 @@
     <section class="forecast-grid" id="forecastGrid" aria-live="polite"></section>
 
     <footer>
-      <p class="source-note">Forecast cards use computer model guidance from Open-Meteo. The NBM mode uses NOAA/NCEP NBM only; the blend mode uses HRRR/GFS, NAM, and NBM for days 1-2, then NBM only for days 3-7. The NWS feed is used only for active watches, warnings, advisories, and statements.</p>
+      <p class="source-note">Forecast cards use computer model guidance from Open-Meteo. The NBM mode uses NOAA/NCEP NBM only; the blend mode uses HRRR/GFS, NAM, and NBM for days 1-2, then NBM only for days 3-7. Alaska locations use GFS because the NBM/HRRR/NAM feeds used here do not cover that point. The NWS feed is used only for active watches, warnings, advisories, and statements.</p>
       <p class="source-note">Severe Chance is a model-derived proxy from thunderstorm probability, CAPE, wind gusts, and rain amount; it is not an official severe weather outlook.</p>
       <p class="source-note icon-credit">Icons use the local 98-06 TWC icon pack you provided, with motion added only for rain, snow, thunderstorm, and wind states.</p>
       <p class="source-note">
@@ -773,6 +778,15 @@
         latitude: 32.9677,
         longitude: -96.7388,
         timezone: "America/Chicago"
+      },
+      {
+        zip: "99639",
+        city: "Ninilchik",
+        name: "Ninilchik, AK",
+        latitude: 60.0312,
+        longitude: -151.4264,
+        timezone: "America/Anchorage",
+        modelSet: "gfs"
       }
     ];
 
@@ -784,13 +798,17 @@
     const modelModes = {
       nbm: {
         label: "NOAA/NCEP NBM",
-        subtitle: (location) => `NOAA/NCEP NBM computer model guidance for ${location.name}.`,
-        loading: "NBM model data"
+        subtitle: (location) => location.modelSet === "gfs"
+          ? `GFS computer model guidance for ${location.name}.`
+          : `NOAA/NCEP NBM computer model guidance for ${location.name}.`,
+        loading: (location) => location.modelSet === "gfs" ? "GFS model data" : "NBM model data"
       },
       blend: {
         label: "HRRR/NAM + NBM",
-        subtitle: (location) => `Short-range HRRR/NAM blend with NBM extended guidance for ${location.name}.`,
-        loading: "HRRR/NAM plus NBM model data"
+        subtitle: (location) => location.modelSet === "gfs"
+          ? `GFS computer model guidance for ${location.name}.`
+          : `Short-range HRRR/NAM blend with NBM extended guidance for ${location.name}.`,
+        loading: (location) => location.modelSet === "gfs" ? "GFS model data" : "HRRR/NAM plus NBM model data"
       }
     };
 
@@ -821,8 +839,8 @@
 
     function buildForecastUrl(location, options = {}) {
       const {
-        model = "ncep_nbm_conus",
-        endpoint = "forecast",
+        model = location.modelSet === "gfs" ? "gfs_seamless" : "ncep_nbm_conus",
+        endpoint = location.modelSet === "gfs" ? "gfs" : "forecast",
         forecastDays = "7"
       } = options;
       const forecastParams = new URLSearchParams({
@@ -943,11 +961,11 @@
         return isNight ? "partly-night.png" : "partly-day.png";
       }
       if (kind === "mostly-clear") {
-        if (windy) return isNight ? "clear-wind.png" : "sunny-wind.png";
+        if (windy) return isNight ? "partly-night-wind.png" : "partly-day-wind.png";
         return isNight ? "fair-night.png" : "fair-day.png";
       }
       if (kind === "clear") {
-        if (windy) return isNight ? "clear-wind.png" : "sunny-wind.png";
+        if (windy) return isNight ? "partly-night-wind.png" : "partly-day-wind.png";
         return isNight ? "clear-night.png" : "sunny.png";
       }
       return windy ? "windy.png" : "cloudy.png";
@@ -1082,6 +1100,7 @@
         title: isDaytime ? "Daytime" : "Nighttime",
         tempLabel: isDaytime ? "High" : "Low",
         temp: periodTemperature(data.hourly, indices, isDaytime, fallbackTemp),
+        code,
         weather,
         rain,
         rainAmount,
@@ -1142,6 +1161,21 @@
       `;
     }
 
+    function conditionText(summary) {
+      if (summary.weather.kind === "storm") {
+        const severeText = summary.code >= 96 || summary.severe >= 8;
+        if (severeText) return summary.thunder >= 50 ? "Severe Thunderstorms" : "Chance of Severe Thunderstorms";
+        return summary.thunder >= 50 ? "Thunderstorms" : "Chance of Thunderstorms";
+      }
+      if (summary.snow >= 20 || summary.snowAmount >= 0.1) {
+        return summary.snow >= 50 ? "Snow" : "Chance of Snow";
+      }
+      if (summary.rain >= 20 || summary.rainAmount >= 0.04) {
+        return summary.rain >= 50 ? "Rain" : "Chance of Rain";
+      }
+      return summary.weather.label;
+    }
+
     function renderPeriod(summary) {
       return `
         <section class="period ${summary.period}">
@@ -1152,15 +1186,15 @@
           <div class="icon-wrap ${summary.period} ${escapeAttribute(summary.weather.iconClass)}">
             <img class="weather-icon-img" src="${escapeAttribute(summary.weather.iconUrl)}" alt="${escapeAttribute(summary.weather.label)}">
           </div>
-          <div class="condition">${escapeHtml(summary.weather.label)}</div>
+          <div class="condition">${escapeHtml(conditionText(summary))}</div>
           <div class="temp">
             <span class="label">${summary.tempLabel} Temp</span>
             <span class="value">${roundTemp(summary.temp)}</span>
           </div>
           <div class="probabilities">
-            ${probabilityRow("Rain", summary.rain, "rain", formatAmount(summary.rainAmount))}
-            ${probabilityRow("Snow", summary.snow, "snow", formatAmount(summary.snowAmount))}
-            ${probabilityRow("Thunder", summary.thunder, "storm")}
+            ${probabilityRow("Chance of Rain", summary.rain, "rain", formatAmount(summary.rainAmount))}
+            ${probabilityRow("Chance of Snow", summary.snow, "snow", formatAmount(summary.snowAmount))}
+            ${probabilityRow("Chance of Thunder", summary.thunder, "storm")}
             ${probabilityRow("Severe Chance", summary.severe, "severe")}
           </div>
         </section>
@@ -1289,6 +1323,16 @@
     }
 
     function buildBlendSources(location) {
+      if (location.modelSet === "gfs") {
+        return [
+          {
+            key: "gfs",
+            label: "GFS",
+            url: buildForecastUrl(location, { model: "gfs_seamless", endpoint: "gfs" })
+          }
+        ];
+      }
+
       return [
         {
           key: "hrrrGfs",
@@ -1369,7 +1413,7 @@
         });
       });
 
-      blended.modelLabel = modelModes.blend.label;
+      blended.modelLabel = sources.length === 1 && sources[0].key === "gfs" ? "GFS" : modelModes.blend.label;
       return blended;
     }
 
@@ -1411,11 +1455,14 @@
       forecastUrl = buildForecastUrl(location);
       alertsUrl = buildAlertsUrl(location);
       const modeConfig = modelModes[modelMode] || modelModes.nbm;
+      const loadingLabel = typeof modeConfig.loading === "function" ? modeConfig.loading(location) : modeConfig.loading;
 
       document.querySelector("#forecastTitle").textContent = `${location.zip} Seven Day Forecast`;
       document.querySelector("#forecastSubtitle").textContent = modeConfig.subtitle(location);
       document.querySelector("#modelLink").href = forecastUrl;
-      document.querySelector("#modelLink").textContent = modelMode === "blend" ? "NBM source JSON" : "model JSON";
+      document.querySelector("#modelLink").textContent = location.modelSet === "gfs"
+        ? "GFS source JSON"
+        : modelMode === "blend" ? "NBM source JSON" : "model JSON";
       document.querySelector("#alertsLink").href = alertsUrl;
       document.querySelectorAll("[data-location]").forEach((button) => {
         button.setAttribute("aria-pressed", String(button.dataset.location === location.zip));
@@ -1427,7 +1474,7 @@
       grid.innerHTML = "";
       status.className = "loading";
       status.hidden = false;
-      status.textContent = `Loading 7 days of ${modeConfig.loading} for ${location.zip}...`;
+      status.textContent = `Loading 7 days of ${loadingLabel} for ${location.zip}...`;
       alertCount.textContent = "Checking...";
       alertsList.innerHTML = `<div class="source-note">Loading active NWS alerts for ${location.zip}.</div>`;
       document.querySelector("#updatedStamp").textContent = "Fetching model data";
@@ -1441,7 +1488,7 @@
       try {
         const forecastPromise = modelMode === "blend"
           ? fetchBlendForecast(point)
-          : fetchJson(forecastUrl).then((data) => ({ ...data, modelLabel: modelModes.nbm.label }));
+          : fetchJson(forecastUrl).then((data) => ({ ...data, modelLabel: point.modelSet === "gfs" ? "GFS" : modelModes.nbm.label }));
         const [forecast, alerts] = await Promise.all([
           forecastPromise,
           fetchJson(alertsUrl, { headers: { Accept: "application/geo+json" } })
