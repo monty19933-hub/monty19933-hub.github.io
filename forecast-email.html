@@ -1022,6 +1022,11 @@
       padding-left: 10px;
     }
 
+    .prob.detail {
+      margin-top: -4px;
+      padding-left: 10px;
+    }
+
     .prob-head {
       display: flex;
       justify-content: space-between;
@@ -1085,6 +1090,10 @@
       font-size: 0.74rem;
     }
 
+    .prob.detail .prob-head {
+      font-size: 0.74rem;
+    }
+
     .track {
       height: 8px;
       border-radius: 99px;
@@ -1093,6 +1102,10 @@
     }
 
     .prob.severe .track {
+      height: 5px;
+    }
+
+    .prob.detail .track {
       height: 5px;
     }
 
@@ -1214,6 +1227,10 @@
 
     .fill.snow {
       background: var(--snow);
+    }
+
+    .fill.snow-level {
+      background: linear-gradient(90deg, #9ccde8, #4f85b5);
     }
 
     .fill.storm {
@@ -1757,6 +1774,7 @@
       "rain",
       "snowfall",
       "cape",
+      "freezing_level_height",
       "weather_code",
       "cloud_cover",
       "temperature_2m",
@@ -2442,6 +2460,25 @@
       return hasValue ? total : null;
     }
 
+    function snowLevelForIndices(data, indices) {
+      const values = data.hourly?.freezing_level_height || [];
+      const levels = indices
+        .map((index) => snowLevelFeet(data, values[index]))
+        .filter(Number.isFinite);
+      return levels.length ? Math.min(...levels) : null;
+    }
+
+    function snowLevelAtHour(data, index) {
+      return snowLevelFeet(data, data.hourly?.freezing_level_height?.[index]);
+    }
+
+    function snowLevelFeet(data, value) {
+      const level = Number(value);
+      if (!Number.isFinite(level)) return null;
+      const unit = String(data.hourly_units?.freezing_level_height || "").toLowerCase();
+      return unit.includes("m") && !unit.includes("ft") ? level * 3.28084 : level;
+    }
+
     function hourlyNumericValue(hourly, key, index) {
       const value = Number(hourly[key]?.[index]);
       return Number.isFinite(value) ? value : null;
@@ -2560,6 +2597,7 @@
       const cape = numericMaxForIndices(data.hourly, "cape", indices);
       const rainAmount = sumForIndices(data.hourly, "rain", indices);
       const snowAmount = sumForIndices(data.hourly, "snowfall", indices);
+      const snowLevel = snowLevelForIndices(data, indices);
       const thunder = maxForIndices(data.hourly, "thunderstorm_probability", indices);
       const rain = maxForIndices(data.hourly, "rain_probability", indices);
       const snow = maxForIndices(data.hourly, "snowfall_probability", indices);
@@ -2582,6 +2620,7 @@
         rainAmount,
         snow,
         snowAmount,
+        snowLevel,
         thunder,
         severe,
         windSpeed,
@@ -2603,6 +2642,7 @@
       const cape = Number(hourly.cape?.[index]);
       const rainAmount = hourlyNumericValue(hourly, "rain", index);
       const snowAmount = hourlyNumericValue(hourly, "snowfall", index);
+      const snowLevel = snowLevelAtHour(data, index);
       const thunder = hourlyPercentValue(hourly, "thunderstorm_probability", index);
       const rain = hourlyPercentValue(hourly, "rain_probability", index);
       const snow = hourlyPercentValue(hourly, "snowfall_probability", index);
@@ -2626,6 +2666,7 @@
         rainAmount,
         snow,
         snowAmount,
+        snowLevel,
         thunder,
         severe,
         windSpeed,
@@ -2819,6 +2860,27 @@
       `;
     }
 
+    function snowLevelRow(value) {
+      const pct = snowLevelTrackPercent(value);
+      return `
+        <div class="prob detail">
+          <div class="prob-head"><span>Snow Level</span><strong>${formatSnowLevel(value)}</strong></div>
+          <div class="track"><div class="fill snow-level" style="--pct: ${pct}%"></div></div>
+        </div>
+      `;
+    }
+
+    function formatSnowLevel(value) {
+      if (!Number.isFinite(value)) return "N/A";
+      const rounded = Math.max(0, Math.round(value / 100) * 100);
+      return `${rounded.toLocaleString("en-US")} ft`;
+    }
+
+    function snowLevelTrackPercent(value) {
+      if (!Number.isFinite(value)) return 0;
+      return Math.max(0, Math.min(100, Math.round((value / 12000) * 100)));
+    }
+
     function conditionText(summary) {
       if (summary.weather.kind === "storm") {
         const severeText = isSevereStorm(summary.code, summary);
@@ -2897,6 +2959,7 @@
           <div class="probabilities">
             ${probabilityRow("Chance of Rain", summary.rain, "rain", formatAmount(summary.rainAmount))}
             ${probabilityRow("Chance of Snow", summary.snow, "snow", formatAmount(summary.snowAmount))}
+            ${snowLevelRow(summary.snowLevel)}
             ${probabilityRow("Chance of Thunderstorms", summary.thunder, "storm")}
             ${probabilityRow("Severe Chance", summary.severe, "severe")}
           </div>
@@ -2956,6 +3019,7 @@
             ${hourlyMetric("Rain Amount", formatAmount(summary.rainAmount))}
             ${hourlyMetric("Chance of Snow", formatPercent(summary.snow))}
             ${hourlyMetric("Snow Amount", formatAmount(summary.snowAmount))}
+            ${hourlyMetric("Snow Level", formatSnowLevel(summary.snowLevel))}
             ${hourlyMetric("Chance of Thunderstorms", formatPercent(summary.thunder))}
             ${hourlyMetric("Severe Chance", formatPercent(summary.severe))}
           </div>
@@ -3567,6 +3631,11 @@
           key: "nbm",
           label: "NBM",
           url: buildForecastUrl(location, { model: "ncep_nbm_conus", endpoint: "gfs" })
+        },
+        {
+          key: "gfsSnowLevel",
+          label: "GFS Snow Level",
+          url: buildForecastUrl(location, { model: "gfs_seamless", endpoint: "gfs" })
         }
       ];
     }
@@ -3642,9 +3711,7 @@
     }
 
     function valuesForBlend(sources, scope, key, time, index) {
-      const preferredKeys = scope === "hourly" && index < 48 || scope === "daily" && index < 2
-        ? ["hrrrGfs", "nam", "nbm"]
-        : ["nbm"];
+      const preferredKeys = preferredBlendSourceKeys(scope, key, index);
 
       return preferredKeys
         .map((sourceKey) => sources.find((source) => source.key === sourceKey))
@@ -3653,6 +3720,17 @@
         .filter((value) => value !== null && value !== undefined && value !== "")
         .map(Number)
         .filter(Number.isFinite);
+    }
+
+    function preferredBlendSourceKeys(scope, key, index) {
+      if (scope === "hourly" && key === "freezing_level_height") {
+        return index < 48
+          ? ["hrrrGfs", "nam", "gfsSnowLevel", "gfs", "nbm"]
+          : ["gfsSnowLevel", "gfs", "nbm"];
+      }
+      return scope === "hourly" && index < 48 || scope === "daily" && index < 2
+        ? ["hrrrGfs", "nam", "nbm"]
+        : ["nbm"];
     }
 
     function blendAverage(values, fallback) {
