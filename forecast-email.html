@@ -241,8 +241,9 @@
     }
 
     .date {
-      color: var(--muted);
-      font-size: 0.82rem;
+      color: var(--text);
+      font-size: 1.04rem;
+      font-weight: 700;
       white-space: nowrap;
     }
 
@@ -1286,7 +1287,7 @@
       const date = new Date(`${isoDate}T12:00:00`);
       return {
         weekday: new Intl.DateTimeFormat("en-US", { weekday: "short", timeZone: point.timezone }).format(date),
-        date: new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: point.timezone }).format(date)
+        date: new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: point.timezone }).format(date)
       };
     }
 
