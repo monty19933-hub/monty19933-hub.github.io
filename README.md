@@ -1,1 +1,1 @@
-A weather 9 day forecast generator when given a zip code or city name.  Generator is based off an HRRR/NAM shortrange blend, and uses the NBM model for day 3-9.  Can be hosted or locally run through a browser.
+A weather 9 day forecast generator when given a zip code or city name.  Generator is based off an HRRR/NAM shortrange blend, and uses the ECMWF model for day 3-9.  Can be hosted or locally run through a browser.
