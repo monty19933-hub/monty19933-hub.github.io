@@ -648,6 +648,7 @@
 
     .icon-wrap.night.clear::before,
     .icon-wrap.night.mostly-clear::before,
+    .icon-wrap.night.cloudy::before,
     .icon-wrap.night.partly-cloudy::before {
       content: "";
       position: absolute;
@@ -661,9 +662,15 @@
         radial-gradient(circle, rgba(255, 255, 255, 0.92) 0 0.95px, transparent 1.6px);
       background-size: 92px 76px, 70px 64px, 46px 42px, 34px 38px;
       background-position: -4px -2px, 26px 12px, 11px 9px, 30px 23px;
-      filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.78));
-      opacity: 0.82;
-      animation: star-twinkle 5.8s ease-in-out infinite;
+      filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.48));
+      opacity: 0.48;
+      animation: star-twinkle 3.1s ease-in-out infinite;
+    }
+
+    .icon-wrap.night.cloudy::before {
+      filter: drop-shadow(0 0 2px rgba(206, 229, 255, 0.22));
+      opacity: 0.16;
+      animation: star-twinkle-cloudy 3.8s ease-in-out infinite;
     }
 
     .icon-wrap.rainy::after,
@@ -1363,22 +1370,31 @@
 
     @keyframes star-twinkle {
       0%, 100% {
-        opacity: 0.64;
-        filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.58));
-        transform: translate3d(0, 0, 0);
-        background-position: -4px -2px, 26px 12px, 11px 9px, 30px 23px;
+        opacity: 0.36;
+        filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.34));
       }
-      35% {
-        opacity: 0.98;
-        filter: drop-shadow(0 0 7px rgba(255, 255, 255, 0.9));
-        transform: translate3d(-1px, 1px, 0);
-        background-position: -7px 1px, 29px 10px, 13px 11px, 28px 21px;
+      42% {
+        opacity: 0.68;
+        filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.72));
       }
-      70% {
-        opacity: 0.74;
-        filter: drop-shadow(0 0 5px rgba(181, 218, 255, 0.78));
-        transform: translate3d(1px, -1px, 0);
-        background-position: -2px -4px, 24px 15px, 9px 8px, 32px 24px;
+      72% {
+        opacity: 0.44;
+        filter: drop-shadow(0 0 4px rgba(181, 218, 255, 0.5));
+      }
+    }
+
+    @keyframes star-twinkle-cloudy {
+      0%, 100% {
+        opacity: 0.08;
+        filter: drop-shadow(0 0 1px rgba(206, 229, 255, 0.16));
+      }
+      46% {
+        opacity: 0.22;
+        filter: drop-shadow(0 0 3px rgba(206, 229, 255, 0.3));
+      }
+      74% {
+        opacity: 0.12;
+        filter: drop-shadow(0 0 2px rgba(206, 229, 255, 0.2));
       }
     }
 
