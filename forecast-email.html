@@ -2283,7 +2283,7 @@
     }
 
     function isSevereStorm(code, metrics = {}) {
-      return Number(code) >= 96 || clampPercent(metrics.severe) > 10;
+      return Number(code) >= 96 || clampPercent(metrics.severe) >= 10;
     }
 
     function rainIntensityClass(metrics = {}) {
@@ -2679,13 +2679,18 @@
       const snow = clampPercent(metrics.snow);
       const rainAmount = Number(metrics.rainAmount) || 0;
       const snowAmount = Number(metrics.snowAmount) || 0;
+      const normalizedBaseCode = isStormCode(baseCode) && thunder < 10 ? 3 : baseCode;
 
-      if (thunder >= 15) return severe > 10 ? 96 : 95;
-      if (isIceCode(baseCode) && (rain >= 15 || snow >= 15 || rainAmount >= 0.02 || snowAmount >= 0.02)) return baseCode;
+      if (thunder >= 10) return severe >= 10 ? 96 : 95;
+      if (isIceCode(normalizedBaseCode) && (rain >= 15 || snow >= 15 || rainAmount >= 0.02 || snowAmount >= 0.02)) return normalizedBaseCode;
       if (snow >= 20 || snowAmount >= 0.1) return snowAmount >= 1 ? 75 : 71;
       if (rain >= 55 || rainAmount >= 0.35) return 63;
       if (rain >= 20 || rainAmount >= 0.04) return 61;
-      return baseCode;
+      return normalizedBaseCode;
+    }
+
+    function isStormCode(code) {
+      return [95, 96, 99].includes(Number(code));
     }
 
     function isIceCode(code) {
@@ -2872,15 +2877,25 @@
 
     function conditionText(summary) {
       if (summary.weather.kind === "storm") {
-        const severeText = isSevereStorm(summary.code, summary);
-        const thunderstormText = summary.thunder > 35;
+        const severeChance = clampPercent(summary.severe);
+        const thunderChance = clampPercent(summary.thunder);
         if (summary.weather.thundersnow) {
-          if (severeText) return "Severe Thundersnow";
-          return thunderstormText ? "Thundersnow" : "Chance of Thundersnow";
+          if (severeChance > 20) return "Severe Thundersnow";
+          if (severeChance >= 10) return "Chance of Severe Thundersnow";
+          if (thunderChance > 30) return "Thundersnow";
+          if (thunderChance >= 10) return "Chance of Thundersnow";
+          return nonStormConditionText(summary);
         }
-        if (severeText) return "Severe Thunderstorms";
-        return thunderstormText ? "Thunderstorms" : "Chance of Thunderstorms";
+        if (severeChance > 20) return "Severe Thunderstorms";
+        if (severeChance >= 10) return "Chance of Severe Thunderstorms";
+        if (thunderChance > 30) return "Thunderstorms";
+        if (thunderChance >= 10) return "Chance of Thunderstorms";
+        return nonStormConditionText(summary);
       }
+      return nonStormConditionText(summary);
+    }
+
+    function nonStormConditionText(summary) {
       if (summary.weather.kind === "ice") {
         const iceChance = Math.max(summary.rain, summary.snow);
         return iceChance >= 50 ? "Ice" : "Chance of Ice";
