@@ -611,6 +611,10 @@
       animation: storm-shake 1.7s ease-in-out infinite;
     }
 
+    .icon-wrap.sunny-storm .weather-icon-img {
+      animation: sun-icon-pulse 2.6s ease-in-out infinite;
+    }
+
     .icon-wrap.windy .weather-icon-img {
       animation: wind-sway 1.9s ease-in-out infinite;
     }
@@ -624,8 +628,8 @@
       z-index: 1;
       border-radius: 50%;
       background:
-        radial-gradient(circle, rgba(255, 238, 62, 0.44), rgba(255, 198, 22, 0.18) 38%, rgba(255, 198, 22, 0) 68%),
-        conic-gradient(from 0deg, rgba(255, 229, 41, 0), rgba(255, 229, 41, 0.22), rgba(255, 229, 41, 0), rgba(255, 229, 41, 0.14), rgba(255, 229, 41, 0));
+        radial-gradient(circle, rgba(255, 242, 70, 0.52), rgba(255, 205, 28, 0.23) 38%, rgba(255, 198, 22, 0) 68%),
+        conic-gradient(from 0deg, rgba(255, 229, 41, 0), rgba(255, 229, 41, 0.28), rgba(255, 229, 41, 0), rgba(255, 229, 41, 0.18), rgba(255, 229, 41, 0));
       filter: blur(6px);
       animation: sun-back-glow 3.4s ease-in-out infinite, sun-ray-spin 14s linear infinite;
     }
@@ -1343,8 +1347,8 @@
     }
 
     @keyframes sun-back-glow {
-      0%, 100% { opacity: 0.28; transform: scale(0.9); }
-      50% { opacity: 0.62; transform: scale(1.07); }
+      0%, 100% { opacity: 0.34; transform: scale(0.9); }
+      50% { opacity: 0.72; transform: scale(1.07); }
     }
 
     @keyframes sun-ray-spin {
@@ -1354,7 +1358,7 @@
 
     @keyframes sun-icon-pulse {
       0%, 100% { filter: drop-shadow(0 0 0 rgba(255, 210, 0, 0)); transform: scale(1); }
-      50% { filter: drop-shadow(0 0 5px rgba(255, 210, 0, 0.38)); transform: scale(1.015); }
+      50% { filter: drop-shadow(0 0 7px rgba(255, 214, 0, 0.48)); transform: scale(1.015); }
     }
 
     @keyframes star-twinkle {
@@ -2350,7 +2354,7 @@
       const severeStorm = match.kind === "storm" && isSevereStorm(code, metrics);
       const profile = detailedWeatherProfile(match.kind, period, code, windy, metrics);
       const label = profile.label || (thundersnow ? "Thundersnow" : (period === "day" && match.label === "Clear" ? "Sunny" : match.label));
-      const intensityClass = precipitationIntensityClass(thundersnow ? "thundersnow" : match.kind, code, metrics);
+      const intensityClass = profile.intensityClass || precipitationIntensityClass(thundersnow ? "thundersnow" : match.kind, code, metrics);
       const motionClass = stormyKinds.has(match.kind)
         ? "stormy"
         : rainyKinds.has(match.kind)
@@ -2371,7 +2375,7 @@
         iconFile,
         iconUrl: iconUrlFor(iconFile, Boolean(profile.fullIcon)),
         thundersnow,
-        iconClass: `${match.kind} ${motionClass}${thundersnow ? " thundersnow" : ""}${severeStorm ? " severe-storm" : ""}${intensityClass ? ` ${intensityClass}` : ""}${windy ? " windy" : ""}`
+        iconClass: `${match.kind} ${motionClass}${profile.iconClass ? ` ${profile.iconClass}` : ""}${thundersnow ? " thundersnow" : ""}${severeStorm ? " severe-storm" : ""}${intensityClass ? ` ${intensityClass}` : ""}${windy ? " windy" : ""}`
       };
     }
 
@@ -2391,7 +2395,7 @@
       const steadySnow = snowAmount >= 0.1 || snowChance >= 35 || [73, 85].includes(numericCode);
       const activeRain = rainChance >= 20 || rainAmount >= 0.04 || [51, 53, 55, 56, 57, 61, 63, 65, 80, 81, 82].includes(numericCode);
       const activeSnow = snowChance >= 20 || snowAmount >= 0.1 || [71, 73, 75, 77, 85, 86].includes(numericCode);
-      const use = (label, iconFile) => ({ label, iconFile, fullIcon: true });
+      const use = (label, iconFile, options = {}) => ({ label, iconFile, fullIcon: true, ...options });
 
       if (kind === "storm") {
         const severeStorm = isSevereStorm(numericCode, metrics);
@@ -2406,12 +2410,26 @@
         if (severeStorm) {
           const label = severeChance > 20 ? "Severe Thunderstorms" : "Chance of Severe Thunderstorms";
           if (activeSnow) return use(label, windy ? "Snow with Strong Thunder and Wind.png" : "Snow with Strong Thunder.png");
-          return use(label, "Thunder Cloud.png");
+          if (severeChance <= 20) {
+            return use(label, isNight ? "Isolated Strong Thunderstorms (night).png" : "Isolated Strong Thunderstorms (day).png", {
+              iconClass: !isNight ? "sunny-storm" : "",
+              intensityClass: "rain-chance"
+            });
+          }
+          if (heavyRain) return use(label, "Strong and Heavy Thunderstorms.png");
+          return use(label, windy ? "Strong Thunderstorms with Wind.png" : "Strong Thunderstorms.png");
         }
 
         const label = thunderChance > 30 ? "Thunderstorms" : "Chance of Thunderstorms";
         if (activeSnow) return use(label, windy ? "Snow with Thunder and Wind.png" : "Snow with Thunder.png");
-        return use(label, "Thunder Cloud.png");
+        if (thunderChance <= 30) {
+          return use(label, isNight ? "Isolated Thunderstorms (night).png" : "Isolated Thunderstorms (day).png", {
+            iconClass: !isNight ? "sunny-storm" : "",
+            intensityClass: "rain-chance"
+          });
+        }
+        if (heavyRain) return use(label, windy ? "Heavy Thunderstorms with Wind.png" : "Heavy Thunderstorms.png");
+        return use(label, windy ? "Thunderstorms with Wind.png" : "Thunderstorms.png");
       }
 
       if (activeRain && activeSnow) {
