@@ -1815,11 +1815,11 @@
 
     const modelModes = {
       blend: {
-        label: "HRRR/NAM + NBM",
+        label: "HRRR/NAM + ECMWF",
         subtitle: (location) => useGlobalModel(location)
           ? `GFS computer model guidance for ${location.name}.`
-          : `Short-range HRRR/NAM blend with NBM extended guidance for ${location.name}.`,
-        loading: (location) => useGlobalModel(location) ? "GFS model data" : "HRRR/NAM plus NBM model data"
+          : `Short-range HRRR/NAM blend with ECMWF extended guidance for ${location.name}.`,
+        loading: (location) => useGlobalModel(location) ? "GFS model data" : "HRRR/NAM plus ECMWF model data"
       }
     };
 
@@ -1850,26 +1850,47 @@
       "is_day"
     ];
 
+    const ecmwfDailyVariables = dailyVariables.filter((key) => key !== "precipitation_probability_max");
+
+    const ecmwfHourlyVariables = [
+      "rain",
+      "snowfall",
+      "cape",
+      "freezing_level_height",
+      "weather_code",
+      "cloud_cover",
+      "temperature_2m",
+      "wind_speed_10m",
+      "wind_gusts_10m",
+      "wind_direction_10m",
+      "is_day",
+      "precipitation_type",
+      "lightning_density",
+      "k_index"
+    ];
+
     function buildForecastUrl(location, options = {}) {
       const modelPoint = modelLocation(location);
       const {
         model = useGlobalModel(location) ? "gfs_seamless" : "ncep_nbm_conus",
         endpoint = useGlobalModel(location) ? "gfs" : "forecast",
-        forecastDays = "9"
+        forecastDays = "9",
+        daily = dailyVariables,
+        hourly = hourlyVariables
       } = options;
       const forecastParams = new URLSearchParams({
         latitude: modelPoint.latitude,
         longitude: modelPoint.longitude,
         timezone: location.timezone,
         forecast_days: forecastDays,
-        models: model,
         temperature_unit: "fahrenheit",
         precipitation_unit: "inch",
         wind_speed_unit: "mph",
-        daily: dailyVariables.join(","),
-        hourly: hourlyVariables.join(",")
+        daily: daily.join(","),
+        hourly: hourly.join(",")
       });
 
+      if (model) forecastParams.set("models", model);
       return `https://api.open-meteo.com/v1/${endpoint}?${forecastParams.toString()}`;
     }
 
@@ -2381,14 +2402,11 @@
         if (severeStorm) {
           const label = severeChance > 20 ? "Severe Thunderstorms" : "Chance of Severe Thunderstorms";
           if (activeSnow) return use(label, windy ? "Snow with Strong Thunder and Wind.png" : "Snow with Strong Thunder.png");
-          if (activeRain && heavyRain) return use(label, windy ? "Heavy Rain with Strong Thunder and Wind.png" : "Heavy Rain with Strong Thunder.png");
-          if (activeRain) return use(label, windy ? "Rain and Strong Thunder with Wind.png" : "Rain and Strong Thunder.png");
           return use(label, windy ? "Strong Thunderstorms with Wind.png" : "Strong Thunderstorms.png");
         }
 
         const label = thunderChance > 30 ? "Thunderstorms" : "Chance of Thunderstorms";
         if (activeSnow) return use(label, windy ? "Snow with Thunder and Wind.png" : "Snow with Thunder.png");
-        if (activeRain) return use(label, windy ? "Rain and Thunder with Wind.png" : "Rain and Thunder.png");
         if (thunderChance < 30) return use(label, isNight ? "Isolated Thunderstorms (night).png" : "Isolated Thunderstorms (day).png");
         return use(label, windy ? "Thunderstorms with Wind.png" : "Thunderstorms.png");
       }
@@ -3862,6 +3880,11 @@
           url: buildForecastUrl(location, { model: "ncep_nam_conus", endpoint: "gfs", forecastDays: "3" })
         },
         {
+          key: "ecmwf",
+          label: "ECMWF",
+          url: buildForecastUrl(location, { model: "", endpoint: "ecmwf", daily: ecmwfDailyVariables, hourly: ecmwfHourlyVariables })
+        },
+        {
           key: "nbm",
           label: "NBM",
           url: buildForecastUrl(location, { model: "ncep_nbm_conus", endpoint: "gfs" })
@@ -3960,11 +3983,11 @@
       if (scope === "hourly" && key === "freezing_level_height") {
         return index < 48
           ? ["hrrrGfs", "nam", "gfsSnowLevel", "gfs", "nbm"]
-          : ["gfsSnowLevel", "gfs", "nbm"];
+          : ["ecmwf", "gfsSnowLevel", "gfs", "nbm"];
       }
       return scope === "hourly" && index < 48 || scope === "daily" && index < 2
         ? ["hrrrGfs", "nam", "nbm"]
-        : ["nbm"];
+        : ["ecmwf", "nbm"];
     }
 
     function blendAverage(values, fallback) {
