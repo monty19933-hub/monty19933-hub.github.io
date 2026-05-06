@@ -387,6 +387,20 @@
       font-size: 0.7rem;
     }
 
+    .alert-event-icon {
+      width: 26px;
+      height: 26px;
+      flex: 0 0 auto;
+      object-fit: contain;
+      filter: drop-shadow(0 1px 1px rgba(20, 24, 30, 0.25));
+    }
+
+    .alert-title .alert-event-icon {
+      width: 28px;
+      height: 28px;
+      margin-left: -2px;
+    }
+
     .alert-title > span:last-child {
       color: var(--alert-severity-text);
       white-space: nowrap;
@@ -833,6 +847,25 @@
       line-height: 1.15;
     }
 
+    .inline-alert-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .inline-alert-title .alert-icon {
+      width: 18px;
+      height: 18px;
+      font-size: 0.62rem;
+    }
+
+    .inline-alert-title .alert-event-icon {
+      width: 24px;
+      height: 24px;
+      margin-left: -2px;
+    }
+
     .inline-alert.alert-statement {
       background: #EED9C4;
     }
@@ -851,7 +884,7 @@
       border-color: rgba(131, 18, 10, 0.5);
     }
 
-    .inline-alert span {
+    .inline-alert > span:not(.inline-alert-title) {
       color: inherit;
       opacity: 0.82;
       font-size: 0.66rem;
@@ -2985,7 +3018,7 @@
             const id = alertFeatureId(feature);
             return `
               <button class="inline-alert ${alertClass}" type="button" data-alert-id="${escapeAttribute(id)}">
-                ${escapeHtml(props.event || "NWS Alert")}
+                <span class="inline-alert-title"><span class="alert-icon" aria-hidden="true"><span>!</span></span>${alertEventIcon(props.event)}<span>${escapeHtml(props.event || "NWS Alert")}</span></span>
                 <span>${escapeHtml(props.severity || "Alert")} | Until ${escapeHtml(formatAlertTime(alertEndValue(props)))}</span>
               </button>
             `;
@@ -3148,7 +3181,7 @@
         return `
           <button class="alert-button ${alertClass}" type="button" data-alert-index="${index}">
             <span class="alert-title">
-              <span><span class="alert-icon" aria-hidden="true"><span>!</span></span>${escapeHtml(props.event || "NWS Alert")}</span>
+              <span><span class="alert-icon" aria-hidden="true"><span>!</span></span>${alertEventIcon(props.event)}${escapeHtml(props.event || "NWS Alert")}</span>
               <span>${escapeHtml(props.severity || "Alert")}</span>
             </span>
             <span>${escapeHtml(props.headline || props.description || "Click for details.")}</span>
@@ -3222,6 +3255,28 @@
       if (event.includes("advisory")) return "alert-advisory";
       if (event.includes("statement") || event.includes("outlook")) return "alert-statement";
       return "";
+    }
+
+    function alertEventIcon(eventName) {
+      const file = alertEventIconFile(eventName);
+      const label = file.replace(/\.png$/, "").replace(/-/g, " ") || "weather";
+      return `<img class="alert-event-icon" src="${escapeAttribute(iconData[file] || `${iconBase}${file}`)}" alt="${escapeAttribute(label)}">`;
+    }
+
+    function alertEventIconFile(eventName) {
+      const event = String(eventName || "").toLowerCase();
+      if (/thundersnow/.test(event)) return "thundersnow.png";
+      if (/tornado|severe thunder|destructive thunder|considerable thunder/.test(event)) return "strong-thunder.png";
+      if (/thunder|tstm|storm/.test(event)) return "thunder.png";
+      if (/blizzard|snow squall|winter storm|heavy snow|lake effect snow|avalanche/.test(event)) return "heavy-snow.png";
+      if (/winter weather|freezing rain|ice storm|freezing drizzle|sleet|snow|freeze|frost/.test(event)) return "snow.png";
+      if (/flash flood|flood|debris flow|hydrologic/.test(event)) return "heavy-rain.png";
+      if (/rain|shower/.test(event)) return "rain.png";
+      if (/high wind|wind advisory|wind warning|wind watch|wind chill|gale|storm surge|surf|rip current|marine/.test(event)) return "windy.png";
+      if (/dense fog|fog|smoke|haze|air quality|dust/.test(event)) return "fog.png";
+      if (/heat|fire weather|red flag|excessive heat/.test(event)) return "sunny.png";
+      if (/cold|hard freeze/.test(event)) return "clear-night.png";
+      return "cloudy.png";
     }
 
     function alertSeverityClass(severity) {
