@@ -2402,13 +2402,12 @@
         if (severeStorm) {
           const label = severeChance > 20 ? "Severe Thunderstorms" : "Chance of Severe Thunderstorms";
           if (activeSnow) return use(label, windy ? "Snow with Strong Thunder and Wind.png" : "Snow with Strong Thunder.png");
-          return use(label, windy ? "Strong Thunderstorms with Wind.png" : "Strong Thunderstorms.png");
+          return use(label, "Thunder Cloud.png");
         }
 
         const label = thunderChance > 30 ? "Thunderstorms" : "Chance of Thunderstorms";
         if (activeSnow) return use(label, windy ? "Snow with Thunder and Wind.png" : "Snow with Thunder.png");
-        if (thunderChance < 30) return use(label, isNight ? "Isolated Thunderstorms (night).png" : "Isolated Thunderstorms (day).png");
-        return use(label, windy ? "Thunderstorms with Wind.png" : "Thunderstorms.png");
+        return use(label, "Thunder Cloud.png");
       }
 
       if (activeRain && activeSnow) {
