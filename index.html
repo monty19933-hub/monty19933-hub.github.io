@@ -2395,6 +2395,10 @@
       const steadySnow = snowAmount >= 0.1 || snowChance >= 35 || [73, 85].includes(numericCode);
       const activeRain = rainChance >= 20 || rainAmount >= 0.04 || [51, 53, 55, 56, 57, 61, 63, 65, 80, 81, 82].includes(numericCode);
       const activeSnow = snowChance >= 20 || snowAmount >= 0.1 || [71, 73, 75, 77, 85, 86].includes(numericCode);
+      const chanceRainEvent = activeRain && rainChance < 50 && rainAmount < 0.08;
+      const chanceSnowEvent = activeSnow && snowChance < 50 && snowAmount < 0.25;
+      const chanceIceEvent = Math.max(rainChance, snowChance) < 50;
+      const dayNightIcon = (dayFile, nightFile) => isNight ? nightFile : dayFile;
       const use = (label, iconFile, options = {}) => ({ label, iconFile, fullIcon: true, ...options });
 
       if (kind === "storm") {
@@ -2433,12 +2437,17 @@
       }
 
       if (activeRain && activeSnow) {
+        if (chanceRainEvent || chanceSnowEvent) return use("Rain and Snow Showers", dayNightIcon("Scattered Rain and Snow Showers (day).png", "Scattered Rain and Snow Showers (night).png"));
         if (heavyRain || heavySnow) return use("Heavy Rain and Snow", windy ? "Heavy Rain and Snow with Wind.png" : "Heavy Rain and Snow.png");
         if (!steadyRain && !steadySnow) return use("Light Rain and Snow", windy ? "Light Rain, Snow and Wind - Rain and Snow Showers with Wind.png" : "Light Rain and Snow - Rain and Snow Showers.png");
         return use("Rain and Snow", windy ? "Rain and Snow with Wind.png" : "Rain and Snow.png");
       }
 
       if (kind === "ice") {
+        if (chanceIceEvent) {
+          if (activeSnow) return use("Wintry Mix", dayNightIcon("Scattered Wintry Mix (day).png", "Scattered Wintry Mix (night).png"));
+          return use("Freezing Rain", dayNightIcon("Scattered Freezing Rain (day).png", "Scattered Freezing Rain (night).png"));
+        }
         if ([56, 57].includes(numericCode)) {
           if (heavyRain) return use("Heavy Freezing Drizzle", "Heavy Freezing Drizzle.png");
           return use("Freezing Drizzle", "Freezing Drizzle.png");
@@ -2449,6 +2458,10 @@
       }
 
       if (kind === "rain") {
+        if (chanceRainEvent) {
+          if ([51, 53, 55].includes(numericCode)) return use("Drizzle", dayNightIcon("Isolated Drizzle (day).png", "Isolated Drizzle (night).png"));
+          return use("Showers", dayNightIcon("Isolated Showers (day).png", "Isolated Showers (night).png"));
+        }
         if ([51, 53, 55].includes(numericCode)) {
           if (heavyRain) return use("Heavy Drizzle", "Heavy Drizzle.png");
           return use("Drizzle", windy ? "Drizzle and Wind.png" : "Drizzle.png");
@@ -2464,6 +2477,10 @@
       }
 
       if (kind === "snow") {
+        if (chanceSnowEvent) {
+          if (numericCode === 77 || snowAmount < 0.04) return use("Flurries", dayNightIcon("Scattered Flurries (day).png", "Scattered Flurries (night).png"));
+          return use("Snow Showers", dayNightIcon("Scattered Snow (day).png", "Scattered Snow (night).png"));
+        }
         if (numericCode === 77 || (!steadySnow && !heavySnow)) return use("Flurries", windy ? "Flurries and Wind.png" : "Flurries.png");
         if (heavySnow) return use("Heavy Snow", windy ? "Heavy Snow and Wind.png" : "Heavy Snow.png");
         if (!steadySnow || [71, 85].includes(numericCode)) return use("Light Snow", windy ? "Light Snow and Wind - Snow Showers and Wind.png" : "Light Snow - Snow Showers.png");
