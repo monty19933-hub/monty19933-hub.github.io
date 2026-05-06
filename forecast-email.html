@@ -666,15 +666,17 @@
         radial-gradient(circle, rgba(255, 255, 255, 0.92) 0 0.95px, transparent 1.6px);
       background-size: 92px 76px, 70px 64px, 46px 42px, 34px 38px;
       background-position: -4px -2px, 26px 12px, 11px 9px, 30px 23px;
-      filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.48));
-      opacity: 0.48;
-      animation: star-twinkle 3.1s ease-in-out infinite;
+      filter: none;
+      opacity: 0.24;
+      transform: none;
+      animation: star-twinkle 4.6s ease-in-out infinite;
+      will-change: opacity;
     }
 
     .icon-wrap.night.cloudy::before {
-      filter: drop-shadow(0 0 2px rgba(206, 229, 255, 0.22));
-      opacity: 0.16;
-      animation: star-twinkle-cloudy 3.8s ease-in-out infinite;
+      filter: none;
+      opacity: 0.06;
+      animation: star-twinkle-cloudy 5.4s ease-in-out infinite;
     }
 
     .icon-wrap.rainy::after,
@@ -1374,31 +1376,25 @@
 
     @keyframes star-twinkle {
       0%, 100% {
-        opacity: 0.36;
-        filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.34));
+        opacity: 0.16;
       }
       42% {
-        opacity: 0.68;
-        filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.72));
+        opacity: 0.34;
       }
       72% {
-        opacity: 0.44;
-        filter: drop-shadow(0 0 4px rgba(181, 218, 255, 0.5));
+        opacity: 0.21;
       }
     }
 
     @keyframes star-twinkle-cloudy {
       0%, 100% {
-        opacity: 0.08;
-        filter: drop-shadow(0 0 1px rgba(206, 229, 255, 0.16));
+        opacity: 0.025;
       }
       46% {
-        opacity: 0.22;
-        filter: drop-shadow(0 0 3px rgba(206, 229, 255, 0.3));
+        opacity: 0.08;
       }
       74% {
-        opacity: 0.12;
-        filter: drop-shadow(0 0 2px rgba(206, 229, 255, 0.2));
+        opacity: 0.04;
       }
     }
 
