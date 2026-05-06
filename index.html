@@ -642,6 +642,25 @@
       animation: wind-sway 1.9s ease-in-out infinite;
     }
 
+    .icon-wrap.night.clear::before,
+    .icon-wrap.night.mostly-clear::before,
+    .icon-wrap.night.partly-cloudy::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      background-image:
+        radial-gradient(circle, rgba(255, 255, 255, 0.95) 0 1.2px, transparent 1.8px),
+        radial-gradient(circle, rgba(181, 218, 255, 0.86) 0 1px, transparent 1.7px),
+        radial-gradient(circle, rgba(255, 239, 174, 0.72) 0 0.9px, transparent 1.5px);
+      background-size: 38px 44px, 56px 62px, 78px 72px;
+      background-position: 7px 6px, 24px 18px, 46px 9px;
+      filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.72));
+      opacity: 0.72;
+      animation: star-twinkle 4.8s ease-in-out infinite;
+    }
+
     .icon-wrap.rainy::after,
     .icon-wrap.stormy::after {
       content: "";
@@ -1335,6 +1354,24 @@
     @keyframes sun-icon-pulse {
       0%, 100% { filter: drop-shadow(0 0 0 rgba(255, 210, 0, 0)); transform: scale(1); }
       50% { filter: drop-shadow(0 0 5px rgba(255, 210, 0, 0.38)); transform: scale(1.015); }
+    }
+
+    @keyframes star-twinkle {
+      0%, 100% {
+        opacity: 0.52;
+        filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.55));
+        transform: translate3d(0, 0, 0) scale(1);
+      }
+      35% {
+        opacity: 0.9;
+        filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.86));
+        transform: translate3d(-2px, 1px, 0) scale(1.015);
+      }
+      70% {
+        opacity: 0.66;
+        filter: drop-shadow(0 0 4px rgba(181, 218, 255, 0.75));
+        transform: translate3d(1px, -1px, 0) scale(0.99);
+      }
     }
 
     @keyframes rain-drops {
@@ -2270,13 +2307,24 @@
     const iconData = {};
     const embeddedForecastData = {};
     const iconBase = "assets/twc-mega/";
+    const fullIconBase = "assets/twc-full/";
+
+    function iconUrlFor(file, useFullPack = false) {
+      if (!useFullPack && iconData[file]) return iconData[file];
+      return `${useFullPack ? fullIconBase : iconBase}${encodeIconPath(file)}`;
+    }
+
+    function encodeIconPath(file) {
+      return String(file || "").split("/").map((part) => encodeURIComponent(part)).join("/");
+    }
 
     function weatherFor(code, period, metrics = {}) {
       const match = weatherMap.find((entry) => entry.codes.includes(Number(code))) || { label: "Variable", kind: "cloudy" };
       const thundersnow = isThundersnow(match.kind, metrics);
-      const label = thundersnow ? "Thundersnow" : (period === "day" && match.label === "Clear" ? "Sunny" : match.label);
       const windy = Number(metrics.windSpeed) >= 20 || Number(metrics.windGust) >= 30;
       const severeStorm = match.kind === "storm" && isSevereStorm(code, metrics);
+      const profile = detailedWeatherProfile(match.kind, period, code, windy, metrics);
+      const label = profile.label || (thundersnow ? "Thundersnow" : (period === "day" && match.label === "Clear" ? "Sunny" : match.label));
       const intensityClass = precipitationIntensityClass(thundersnow ? "thundersnow" : match.kind, code, metrics);
       const motionClass = stormyKinds.has(match.kind)
         ? "stormy"
@@ -2289,17 +2337,135 @@
               : windy
                 ? "windy"
                 : "still";
-      const iconFile = iconFileFor(match.kind, period, code, windy, metrics);
+      const iconFile = profile.iconFile || iconFileFor(match.kind, period, code, windy, metrics);
 
       return {
         ...match,
         label,
         period,
         iconFile,
-        iconUrl: iconData[iconFile] || `${iconBase}${iconFile}`,
+        iconUrl: iconUrlFor(iconFile, Boolean(profile.fullIcon)),
         thundersnow,
         iconClass: `${match.kind} ${motionClass}${thundersnow ? " thundersnow" : ""}${severeStorm ? " severe-storm" : ""}${intensityClass ? ` ${intensityClass}` : ""}${windy ? " windy" : ""}`
       };
+    }
+
+    function detailedWeatherProfile(kind, period, code, windy, metrics = {}) {
+      const numericCode = Number(code);
+      const isNight = period === "night";
+      const rainChance = clampPercent(metrics.rain);
+      const snowChance = clampPercent(metrics.snow);
+      const thunderChance = clampPercent(metrics.thunder);
+      const severeChance = clampPercent(metrics.severe);
+      const rainAmount = Number(metrics.rainAmount) || 0;
+      const snowAmount = Number(metrics.snowAmount) || 0;
+      const temp = Number(metrics.temp);
+      const heavyRain = rainAmount >= 0.25 || rainChance >= 70 || [65, 82].includes(numericCode);
+      const steadyRain = rainAmount >= 0.08 || rainChance >= 40 || [63, 81].includes(numericCode);
+      const heavySnow = snowAmount >= 1 || snowChance >= 70 || [75, 86].includes(numericCode);
+      const steadySnow = snowAmount >= 0.1 || snowChance >= 35 || [73, 85].includes(numericCode);
+      const activeRain = rainChance >= 20 || rainAmount >= 0.04 || [51, 53, 55, 56, 57, 61, 63, 65, 80, 81, 82].includes(numericCode);
+      const activeSnow = snowChance >= 20 || snowAmount >= 0.1 || [71, 73, 75, 77, 85, 86].includes(numericCode);
+      const use = (label, iconFile) => ({ label, iconFile, fullIcon: true });
+
+      if (kind === "storm") {
+        const severeStorm = isSevereStorm(numericCode, metrics);
+        if (isThundersnow(kind, metrics)) {
+          const label = severeStorm
+            ? (severeChance > 20 ? "Severe Thundersnow" : "Chance of Severe Thundersnow")
+            : (thunderChance > 30 ? "Thundersnow" : "Chance of Thundersnow");
+          if (severeStorm) return use(label, windy ? "Snow with Strong Thunder and Wind.png" : "Snow with Strong Thunder.png");
+          return use(label, windy ? "Snow with Thunder and Wind.png" : "Snow with Thunder.png");
+        }
+
+        if (severeStorm) {
+          const label = severeChance > 20 ? "Severe Thunderstorms" : "Chance of Severe Thunderstorms";
+          if (activeSnow) return use(label, windy ? "Snow with Strong Thunder and Wind.png" : "Snow with Strong Thunder.png");
+          if (activeRain && heavyRain) return use(label, windy ? "Heavy Rain with Strong Thunder and Wind.png" : "Heavy Rain with Strong Thunder.png");
+          if (activeRain) return use(label, windy ? "Rain and Strong Thunder with Wind.png" : "Rain and Strong Thunder.png");
+          return use(label, windy ? "Strong Thunderstorms with Wind.png" : "Strong Thunderstorms.png");
+        }
+
+        const label = thunderChance > 30 ? "Thunderstorms" : "Chance of Thunderstorms";
+        if (activeSnow) return use(label, windy ? "Snow with Thunder and Wind.png" : "Snow with Thunder.png");
+        if (activeRain) return use(label, windy ? "Rain and Thunder with Wind.png" : "Rain and Thunder.png");
+        if (thunderChance < 30) return use(label, isNight ? "Isolated Thunderstorms (night).png" : "Isolated Thunderstorms (day).png");
+        return use(label, windy ? "Thunderstorms with Wind.png" : "Thunderstorms.png");
+      }
+
+      if (activeRain && activeSnow) {
+        if (heavyRain || heavySnow) return use("Heavy Rain and Snow", windy ? "Heavy Rain and Snow with Wind.png" : "Heavy Rain and Snow.png");
+        if (!steadyRain && !steadySnow) return use("Light Rain and Snow", windy ? "Light Rain, Snow and Wind - Rain and Snow Showers with Wind.png" : "Light Rain and Snow - Rain and Snow Showers.png");
+        return use("Rain and Snow", windy ? "Rain and Snow with Wind.png" : "Rain and Snow.png");
+      }
+
+      if (kind === "ice") {
+        if ([56, 57].includes(numericCode)) {
+          if (heavyRain) return use("Heavy Freezing Drizzle", "Heavy Freezing Drizzle.png");
+          return use("Freezing Drizzle", "Freezing Drizzle.png");
+        }
+        if (activeSnow) return use("Wintry Mix", windy ? "Wintry Mix and Wind.png" : "Wintry Mix.png");
+        if (heavyRain) return use("Heavy Freezing Rain", "Heavy Freezing Rain.png");
+        return use("Freezing Rain", windy ? "Freezing Rain and Wind.png" : "Freezing Rain.png");
+      }
+
+      if (kind === "rain") {
+        if ([51, 53, 55].includes(numericCode)) {
+          if (heavyRain) return use("Heavy Drizzle", "Heavy Drizzle.png");
+          return use("Drizzle", windy ? "Drizzle and Wind.png" : "Drizzle.png");
+        }
+        if ([80, 81, 82].includes(numericCode) || rainChance < 40) {
+          if (heavyRain) return use("Heavy Rain", windy ? "Heavy Rain and Wind.png" : "Heavy Rain.png");
+          if (!steadyRain) return use("Few Showers", windy ? "Few Showers and Wind.png" : "Few Showers.png");
+          return use("Light Rain", windy ? "Light Rain and Wind.png" : "Light Rain - Showers.png");
+        }
+        if (heavyRain) return use("Heavy Rain", windy ? "Heavy Rain and Wind.png" : "Heavy Rain.png");
+        if (!steadyRain) return use("Light Rain", windy ? "Light Rain and Wind.png" : "Light Rain - Showers.png");
+        return use("Rain", windy ? "Rain and Wind.png" : "Rain.png");
+      }
+
+      if (kind === "snow") {
+        if (numericCode === 77 || (!steadySnow && !heavySnow)) return use("Flurries", windy ? "Flurries and Wind.png" : "Flurries.png");
+        if (heavySnow) return use("Heavy Snow", windy ? "Heavy Snow and Wind.png" : "Heavy Snow.png");
+        if (!steadySnow || [71, 85].includes(numericCode)) return use("Light Snow", windy ? "Light Snow and Wind - Snow Showers and Wind.png" : "Light Snow - Snow Showers.png");
+        return use("Snow", windy ? "Snow and Wind.png" : "Snow.png");
+      }
+
+      if (kind === "fog") {
+        if (numericCode === 48 || temp <= 32) return use("Freezing Fog", "Freezing Fog.png");
+        return use("Foggy Conditions", "Foggy Conditions.png");
+      }
+
+      if (kind === "cloudy") {
+        if (temp >= 90) return use("Cloudy and Hot", "Cloudy and Hot.png");
+        if (temp <= 15) return use("Cloudy and Frigid", "Cloudy and Frigid.png");
+        return use("Cloudy", windy ? "Cloudy and Windy.png" : "Cloudy.png");
+      }
+
+      if (kind === "partly-cloudy") {
+        if (temp >= 90) return use("Partly Cloudy and Hot", "Partly Cloudy and Hot.png");
+        if (temp <= 15) return use("Partly Cloudy and Frigid", isNight ? "Partly Cloudy and Frigid (night).png" : "Partly Cloudy and Frigid (day).png");
+        if (windy) return use("Partly Cloudy and Windy", isNight ? "Partly Cloudy and Windy (night).png" : "Partly Cloudy and Windy (day).png");
+        return use("Partly Cloudy", isNight ? "Partly Cloudy (night).png" : "Partly Cloudy (day).png");
+      }
+
+      if (kind === "mostly-clear") {
+        const label = isNight ? "Mostly Clear" : "Mostly Sunny";
+        if (temp >= 90) return use(`${label} and Hot`, isNight ? "Mostly Clear.png" : "Mostly Sunny and Hot.png");
+        if (temp <= 15) return use(`${label} and Frigid`, isNight ? "Mostly Clear and Frigid.png" : "Mostly Sunny and Frigid.png");
+        if (windy) return use(`${label} and Windy`, isNight ? "Mostly Clear and Windy.png" : "Mostly Sunny and Windy.png");
+        return use(label, isNight ? "Mostly Clear.png" : "Mostly Sunny.png");
+      }
+
+      if (kind === "clear") {
+        const label = isNight ? "Clear" : "Sunny";
+        if (temp >= 90) return use(`${label} and Hot`, isNight ? "Clear.png" : "Sunny and Hot.png");
+        if (temp <= 15) return use(`${label} and Frigid`, isNight ? "Clear and Frigid.png" : "Sunny and Frigid.png");
+        if (windy) return use(`${label} and Windy`, isNight ? "Clear and Windy.png" : "Sunny and Windy.png");
+        return use(label, isNight ? "Clear.png" : "Sunny.png");
+      }
+
+      return {};
     }
 
     function precipitationIntensityClass(kind, code, metrics = {}) {
@@ -2630,18 +2796,19 @@
       const rain = maxForIndices(data.hourly, "rain_probability", indices);
       const snow = maxForIndices(data.hourly, "snowfall_probability", indices);
       const severe = severeChance(thunder, cape, windGust, rainAmount);
+      const temp = periodTemperature(data.hourly, indices, isDaytime, fallbackTemp);
       const interval = alertIntervalForPeriod(data.hourly, isoDate, isDaytime);
       const code = representativeWeatherCode(
         dominantWeatherCode(data.hourly, indices, data.daily.weather_code[dailyIndex]),
         { thunder, rain, snow, rainAmount, snowAmount, severe }
       );
-      const weather = weatherFor(code, period, { windSpeed, windGust, rain, rainAmount, snow, snowAmount, thunder, severe });
+      const weather = weatherFor(code, period, { windSpeed, windGust, rain, rainAmount, snow, snowAmount, thunder, severe, temp });
 
       return {
         period,
         title: isDaytime ? "Daytime" : "Nighttime",
         tempLabel: isDaytime ? "High" : "Low",
-        temp: periodTemperature(data.hourly, indices, isDaytime, fallbackTemp),
+        temp,
         code,
         weather,
         rain,
@@ -2675,11 +2842,12 @@
       const rain = hourlyPercentValue(hourly, "rain_probability", index);
       const snow = hourlyPercentValue(hourly, "snowfall_probability", index);
       const severe = severeChance(thunder, cape, windGust, rainAmount);
+      const temp = Number(hourly.temperature_2m?.[index]);
       const code = representativeWeatherCode(
         Number(hourly.weather_code?.[index]),
         { thunder, rain, snow, rainAmount, snowAmount, severe }
       );
-      const weather = weatherFor(code, period, { windSpeed, windGust, rain, rainAmount, snow, snowAmount, thunder, severe });
+      const weather = weatherFor(code, period, { windSpeed, windGust, rain, rainAmount, snow, snowAmount, thunder, severe, temp });
 
       return {
         period,
@@ -2687,7 +2855,7 @@
         startTime: hourly.time?.[index] || "",
         endTime: addHoursToLocalIso(hourly.time?.[index] || "", 1),
         tempLabel: "Hourly",
-        temp: Number(hourly.temperature_2m?.[index]),
+        temp,
         code,
         weather,
         rain,
@@ -2930,15 +3098,23 @@
     function nonStormConditionText(summary) {
       if (summary.weather.kind === "ice") {
         const iceChance = Math.max(summary.rain, summary.snow);
-        return iceChance >= 50 ? "Ice" : "Chance of Ice";
+        return iceChance >= 50 ? summary.weather.label : chanceCondition(summary.weather.label);
       }
       if (summary.snow >= 20 || summary.snowAmount >= 0.1) {
-        return summary.snow >= 50 ? "Snow" : "Chance of Snow";
+        return summary.snow >= 50 || summary.snowAmount >= 0.25 ? summary.weather.label : chanceCondition(summary.weather.label);
       }
       if (summary.rain >= 20 || summary.rainAmount >= 0.04) {
-        return summary.rain >= 50 ? "Rain" : "Chance of Rain";
+        return summary.rain >= 50 || summary.rainAmount >= 0.08 ? summary.weather.label : chanceCondition(summary.weather.label);
       }
       return summary.weather.label;
+    }
+
+    function chanceCondition(label) {
+      const text = String(label || "Precipitation");
+      if (/^Chance of /i.test(text)) return text;
+      if (/^Few Showers$/i.test(text)) return "Chance of Showers";
+      if (/^Few /i.test(text)) return text.replace(/^Few /i, "Chance of ");
+      return `Chance of ${text}`;
     }
 
     function markPotentialRecord(summary, records, isDaytime) {
@@ -3127,7 +3303,7 @@
         return;
       }
 
-      const weather = weatherFor(data.code, data.period, { windSpeed: data.windSpeed });
+      const weather = weatherFor(data.code, data.period, { windSpeed: data.windSpeed, temp: data.temperature });
       currentConditions.innerHTML = `
         <div class="icon-wrap current-icon ${data.period} ${escapeAttribute(weather.iconClass)}">
           <img class="weather-icon-img" src="${escapeAttribute(weather.iconUrl)}" alt="${escapeAttribute(data.condition)}">
@@ -3260,7 +3436,7 @@
     function alertEventIcon(eventName) {
       const file = alertEventIconFile(eventName);
       const label = file.replace(/\.png$/, "").replace(/-/g, " ") || "weather";
-      return `<img class="alert-event-icon" src="${escapeAttribute(iconData[file] || `${iconBase}${file}`)}" alt="${escapeAttribute(label)}">`;
+      return `<img class="alert-event-icon" src="${escapeAttribute(iconUrlFor(file))}" alt="${escapeAttribute(label)}">`;
     }
 
     function alertEventIconFile(eventName) {
