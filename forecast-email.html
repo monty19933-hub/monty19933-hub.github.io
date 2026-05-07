@@ -278,10 +278,10 @@
       font-size: 1.1rem;
     }
 
-    .photo-rotator {
+    .top-photo-panel {
       position: relative;
-      min-height: 190px;
-      margin: 16px 0 18px;
+      margin: 0 0 20px;
+      padding: 16px;
       border: 1px solid rgba(80, 96, 112, 0.2);
       border-radius: 8px;
       overflow: hidden;
@@ -290,18 +290,40 @@
       isolation: isolate;
     }
 
-    .photo-rotator::after {
+    .top-photo-panel::after {
       content: "";
       position: absolute;
       inset: 0;
       z-index: 2;
       pointer-events: none;
       background:
-        linear-gradient(90deg, rgba(8, 14, 22, 0.28), rgba(8, 14, 22, 0.06) 32%, rgba(8, 14, 22, 0.18)),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(8, 14, 22, 0.18));
+        linear-gradient(90deg, rgba(8, 14, 22, 0.5), rgba(8, 14, 22, 0.18) 34%, rgba(8, 14, 22, 0.42)),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(8, 14, 22, 0.5));
     }
 
-    .photo-rotator__image {
+    .top-photo-panel > :not(.top-photo-panel__image) {
+      position: relative;
+      z-index: 3;
+    }
+
+    .top-photo-panel .masthead {
+      border-bottom-color: rgba(255, 255, 255, 0.38);
+    }
+
+    .top-photo-panel h1,
+    .top-photo-panel .stamp strong {
+      color: #fff;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.48);
+    }
+
+    .top-photo-panel .subtitle,
+    .top-photo-panel .stamp,
+    .top-photo-panel > .source-note {
+      color: rgba(255, 255, 255, 0.9);
+      text-shadow: 0 1px 5px rgba(0, 0, 0, 0.45);
+    }
+
+    .top-photo-panel__image {
       position: absolute;
       inset: 0;
       width: 100%;
@@ -311,9 +333,10 @@
       opacity: 0;
       animation: photo-rotate 36s ease-in-out infinite;
       animation-delay: var(--photo-delay, 0s);
+      z-index: 0;
     }
 
-    .photo-rotator__image:first-child {
+    .top-photo-panel__image:first-child {
       opacity: 1;
     }
 
@@ -1629,8 +1652,8 @@
         grid-template-columns: 96px 1fr;
       }
 
-      .photo-rotator {
-        min-height: 150px;
+      .top-photo-panel {
+        padding: 12px;
       }
 
       .current-metric {
@@ -1740,6 +1763,13 @@
 </head>
 <body>
   <main class="page">
+    <section class="top-photo-panel" aria-label="Forecast overview">
+      <img class="top-photo-panel__image" src="assets/weather-photos/weather-photo-1.png" alt="" style="--photo-delay: 0s">
+      <img class="top-photo-panel__image" src="assets/weather-photos/weather-photo-2.png" alt="" style="--photo-delay: 6s">
+      <img class="top-photo-panel__image" src="assets/weather-photos/weather-photo-3.png" alt="" style="--photo-delay: 12s">
+      <img class="top-photo-panel__image" src="assets/weather-photos/weather-photo-4.png" alt="" style="--photo-delay: 18s">
+      <img class="top-photo-panel__image" src="assets/weather-photos/weather-photo-5.png" alt="" style="--photo-delay: 24s">
+      <img class="top-photo-panel__image" src="assets/weather-photos/weather-photo-6.png" alt="" style="--photo-delay: 30s">
     <header class="masthead">
       <div>
         <h1 id="forecastTitle">Tigard, OR: Nine Day Forecast</h1>
@@ -1775,15 +1805,6 @@
       <div class="search-results" id="locationSearchResults" aria-live="polite"></div>
     </section>
 
-    <section class="photo-rotator" aria-label="Weather photos">
-      <img class="photo-rotator__image" src="assets/weather-photos/weather-photo-1.png" alt="" style="--photo-delay: 0s">
-      <img class="photo-rotator__image" src="assets/weather-photos/weather-photo-2.png" alt="" style="--photo-delay: 6s">
-      <img class="photo-rotator__image" src="assets/weather-photos/weather-photo-3.png" alt="" style="--photo-delay: 12s">
-      <img class="photo-rotator__image" src="assets/weather-photos/weather-photo-4.png" alt="" style="--photo-delay: 18s">
-      <img class="photo-rotator__image" src="assets/weather-photos/weather-photo-5.png" alt="" style="--photo-delay: 24s">
-      <img class="photo-rotator__image" src="assets/weather-photos/weather-photo-6.png" alt="" style="--photo-delay: 30s">
-    </section>
-
     <section class="alerts" aria-labelledby="alertsTitle">
       <div class="alerts__bar">
         <h2 id="alertsTitle"><span class="alert-icon" aria-hidden="true"><span>!</span></span>NWS Watches and Warnings</h2>
@@ -1792,6 +1813,7 @@
       <div class="alerts__list" id="alertsList">
         <div class="source-note">Loading active NWS alerts for the point location.</div>
       </div>
+    </section>
     </section>
 
     <section id="status" class="loading">Loading 9 days of model data...</section>
