@@ -88,8 +88,10 @@
       padding: 12px;
       border: 1px solid rgba(80, 96, 112, 0.16);
       border-radius: 8px;
-      background: rgba(255, 255, 255, 0.72);
-      box-shadow: 0 8px 20px rgba(71, 83, 98, 0.08);
+      background: rgba(255, 255, 255, 0.28);
+      box-shadow: 0 8px 20px rgba(12, 18, 28, 0.1);
+      -webkit-backdrop-filter: blur(2px);
+      backdrop-filter: blur(2px);
     }
 
     .current-conditions[hidden] {
@@ -133,7 +135,9 @@
       padding: 8px;
       border: 1px solid rgba(80, 96, 112, 0.14);
       border-radius: 6px;
-      background: rgba(255, 255, 255, 0.66);
+      background: rgba(255, 255, 255, 0.24);
+      -webkit-backdrop-filter: blur(2px);
+      backdrop-filter: blur(2px);
     }
 
     .current-metric strong {
@@ -166,11 +170,13 @@
     .location-tools button {
       border: 1px solid var(--line);
       border-radius: 6px;
-      background: rgba(255, 255, 255, 0.74);
+      background: rgba(255, 255, 255, 0.32);
       color: var(--ink);
       padding: 9px 12px;
       cursor: pointer;
       font-weight: 750;
+      -webkit-backdrop-filter: blur(2px);
+      backdrop-filter: blur(2px);
     }
 
     .location-toggle button:hover,
@@ -211,8 +217,8 @@
 
     .pin-toggle[aria-pressed="true"] {
       color: #7b4f00;
-      background: #fff3bf;
-      border-color: #e3bd42;
+      background: rgba(255, 243, 191, 0.34);
+      border-color: rgba(227, 189, 66, 0.58);
     }
 
     .location-tools {
@@ -222,7 +228,9 @@
       padding: 10px;
       border: 1px solid rgba(80, 96, 112, 0.16);
       border-radius: 8px;
-      background: rgba(255, 255, 255, 0.48);
+      background: rgba(255, 255, 255, 0.24);
+      -webkit-backdrop-filter: blur(2px);
+      backdrop-filter: blur(2px);
     }
 
     .location-search-form {
@@ -248,7 +256,7 @@
       border-radius: 6px;
       padding: 10px 12px;
       color: var(--ink);
-      background: #fff;
+      background: rgba(255, 255, 255, 0.62);
       font: inherit;
     }
 
@@ -269,8 +277,10 @@
       padding: 8px;
       border: 1px solid rgba(80, 96, 112, 0.16);
       border-radius: 8px;
-      background: rgba(255, 255, 255, 0.9);
-      box-shadow: 0 10px 22px rgba(71, 83, 98, 0.08);
+      background: rgba(255, 255, 255, 0.36);
+      box-shadow: 0 10px 22px rgba(12, 18, 28, 0.1);
+      -webkit-backdrop-filter: blur(2px);
+      backdrop-filter: blur(2px);
     }
 
     .stamp strong {
@@ -321,6 +331,22 @@
     .top-photo-panel > .source-note {
       color: rgba(255, 255, 255, 0.9);
       text-shadow: 0 1px 5px rgba(0, 0, 0, 0.45);
+    }
+
+    .top-photo-panel .current-summary span,
+    .top-photo-panel .current-metric,
+    .top-photo-panel .location-tools .source-note {
+      color: rgba(24, 32, 42, 0.94);
+    }
+
+    .top-photo-panel #locationSearchStatus {
+      width: fit-content;
+      padding: 4px 7px;
+      border-radius: 5px;
+      color: #fff;
+      background: rgba(0, 0, 0, 0.34);
+      font-weight: 800;
+      text-shadow: 0 1px 5px rgba(0, 0, 0, 0.68);
     }
 
     .top-photo-panel__image {
@@ -1199,12 +1225,14 @@
     .music-toggle {
       border: 1px solid var(--line);
       border-radius: 6px;
-      background: #fff;
+      background: rgba(255, 255, 255, 0.32);
       color: var(--ink);
       padding: 6px 10px;
       cursor: pointer;
       font-weight: 800;
       line-height: 1;
+      -webkit-backdrop-filter: blur(2px);
+      backdrop-filter: blur(2px);
     }
 
     .music-toggle:hover,
@@ -1216,6 +1244,11 @@
     .music-volume {
       width: 92px;
       accent-color: #1f7a64;
+    }
+
+    .top-photo-panel .music-label {
+      color: #fff;
+      text-shadow: 0 1px 5px rgba(0, 0, 0, 0.68);
     }
 
     .prob.severe .prob-head {
@@ -1804,6 +1837,7 @@
       <p class="source-note" id="locationSearchStatus">Pinned favorites stay on this browser unless you unpin them.</p>
       <div class="search-results" id="locationSearchResults" aria-live="polite"></div>
     </section>
+    </section>
 
     <section class="alerts" aria-labelledby="alertsTitle">
       <div class="alerts__bar">
@@ -1813,7 +1847,6 @@
       <div class="alerts__list" id="alertsList">
         <div class="source-note">Loading active NWS alerts for the point location.</div>
       </div>
-    </section>
     </section>
 
     <section id="status" class="loading">Loading 9 days of model data...</section>
