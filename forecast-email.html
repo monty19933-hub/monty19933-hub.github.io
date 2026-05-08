@@ -1223,54 +1223,6 @@
       white-space: nowrap;
     }
 
-    .music-panel {
-      margin-top: 8px;
-      justify-self: end;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .music-label {
-      color: var(--muted);
-      font-size: 0.76rem;
-      font-weight: 800;
-      white-space: nowrap;
-    }
-
-    .music-panel audio {
-      display: none;
-    }
-
-    .music-toggle {
-      border: 1px solid var(--line);
-      border-radius: 6px;
-      background: rgba(255, 255, 255, 0.14);
-      color: var(--ink);
-      padding: 6px 10px;
-      cursor: pointer;
-      font-weight: 800;
-      line-height: 1;
-      -webkit-backdrop-filter: blur(2px);
-      backdrop-filter: blur(2px);
-    }
-
-    .music-toggle:hover,
-    .music-toggle:focus-visible {
-      border-color: #1f7a64;
-      outline: none;
-    }
-
-    .music-volume {
-      width: 92px;
-      accent-color: #1f7a64;
-    }
-
-    .top-photo-panel .music-label {
-      color: #fff;
-      text-shadow: 0 1px 5px rgba(0, 0, 0, 0.68);
-    }
-
     .prob.severe .prob-head {
       font-size: 0.74rem;
     }
@@ -1697,9 +1649,6 @@
         min-width: 0;
       }
 
-      .music-panel {
-        justify-self: start;
-      }
 
       .current-conditions {
         grid-template-columns: 96px 1fr;
@@ -1832,12 +1781,6 @@
         <span>Today</span>
         <strong id="todayStamp">Loading...</strong>
         <span id="updatedStamp">Fetching model data</span>
-        <section class="music-panel" aria-label="Background music">
-          <span class="music-label">Music Controls</span>
-          <audio id="forecastAudio" autoplay loop preload="auto" playsinline src="assets/audio/local-forecast-nighttime.mp3"></audio>
-          <button class="music-toggle" id="musicToggle" type="button" aria-label="Play or pause background music">Play</button>
-          <input class="music-volume" id="musicVolume" type="range" aria-label="Background music volume" min="0" max="1" step="0.01" value="0.45">
-        </section>
       </div>
     </header>
 
@@ -2102,9 +2045,6 @@
     const hourlyDialogTitle = document.querySelector("#hourlyDialogTitle");
     const hourlyDialogSubtitle = document.querySelector("#hourlyDialogSubtitle");
     const hourlyDialogBody = document.querySelector("#hourlyDialogBody");
-    const forecastAudio = document.querySelector("#forecastAudio");
-    const musicToggle = document.querySelector("#musicToggle");
-    const musicVolume = document.querySelector("#musicVolume");
     const favoritesList = document.querySelector("#favoritesList");
     const locationSearchForm = document.querySelector("#locationSearchForm");
     const locationSearchInput = document.querySelector("#locationSearchInput");
@@ -2121,7 +2061,6 @@
     hourlyDialog.addEventListener("click", (event) => {
       if (event.target === hourlyDialog) hourlyDialog.close();
     });
-    setupMusicControls();
     renderFavorites();
     setupLocationControls();
     grid.addEventListener("click", (event) => {
@@ -2439,43 +2378,6 @@
       { codes: [71, 73, 75, 77, 85, 86], label: "Snow", kind: "snow" },
       { codes: [95, 96, 99], label: "Thunderstorms", kind: "storm" }
     ];
-
-    function setupMusicControls() {
-      if (!forecastAudio || !musicToggle || !musicVolume) return;
-
-      forecastAudio.volume = Number(musicVolume.value);
-      forecastAudio.loop = true;
-
-      const syncMusicButton = () => {
-        musicToggle.textContent = forecastAudio.paused ? "Play" : "Pause";
-        musicToggle.setAttribute("aria-pressed", String(!forecastAudio.paused));
-      };
-
-      const playMusic = () => forecastAudio.play()
-        .then(syncMusicButton)
-        .catch(syncMusicButton);
-
-      musicToggle.addEventListener("click", () => {
-        if (forecastAudio.paused) playMusic();
-        else forecastAudio.pause();
-      });
-
-      musicVolume.addEventListener("input", () => {
-        forecastAudio.volume = Number(musicVolume.value);
-      });
-
-      forecastAudio.addEventListener("play", syncMusicButton);
-      forecastAudio.addEventListener("pause", syncMusicButton);
-      window.addEventListener("pointerdown", () => {
-        if (forecastAudio.paused) playMusic();
-      }, { once: true });
-      window.addEventListener("keydown", () => {
-        if (forecastAudio.paused) playMusic();
-      }, { once: true });
-
-      playMusic();
-      syncMusicButton();
-    }
 
     const rainyKinds = new Set(["rain"]);
     const snowyKinds = new Set(["snow"]);
