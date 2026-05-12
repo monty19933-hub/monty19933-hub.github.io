@@ -251,6 +251,10 @@
       backdrop-filter: blur(2px);
     }
 
+    .masthead .location-tools + .subtitle {
+      margin-top: 10px;
+    }
+
     .location-search-form {
       display: grid;
       grid-template-columns: minmax(180px, 360px) auto auto;
@@ -725,6 +729,55 @@
       z-index: 2;
       transform-origin: center;
       image-rendering: auto;
+    }
+
+    .icon-wrap.icon-sequence {
+      grid-template-columns: minmax(0, 1fr) 18px minmax(0, 1fr);
+      gap: 3px;
+      padding: 5px;
+      background: #f7fbff;
+    }
+
+    .icon-wrap.icon-sequence::before,
+    .icon-wrap.icon-sequence::after {
+      content: none;
+    }
+
+    .am-pm-icon-wrap {
+      width: 100%;
+      height: 100%;
+      min-height: 96px;
+      border-radius: 6px;
+    }
+
+    .icon-wrap.icon-sequence .weather-icon-img {
+      width: 58px;
+      height: 58px;
+    }
+
+    .am-pm-label {
+      position: absolute;
+      top: 4px;
+      left: 50%;
+      z-index: 4;
+      transform: translateX(-50%);
+      padding: 1px 5px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.86);
+      color: #1f3448;
+      font-size: 0.58rem;
+      font-weight: 900;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .icon-sequence-arrow {
+      z-index: 4;
+      color: #36546d;
+      font-size: 1.05rem;
+      font-weight: 900;
+      line-height: 1;
+      text-shadow: 0 1px 0 #fff;
     }
 
     .icon-wrap.rainy .weather-icon-img,
@@ -1667,13 +1720,20 @@
         min-width: 0;
       }
 
-
       .current-conditions {
         grid-template-columns: 96px 1fr;
       }
 
       .top-photo-panel {
         padding: 12px;
+      }
+
+      .top-photo-panel .location-toggle {
+        margin-top: 12px;
+      }
+
+      .top-photo-panel .location-tools {
+        margin-top: 8px;
       }
 
       .current-metric {
@@ -1790,34 +1850,34 @@
       <img class="top-photo-panel__image" src="assets/weather-photos/weather-photo-4.png" alt="" style="--photo-delay: 18s">
       <img class="top-photo-panel__image" src="assets/weather-photos/weather-photo-5.png" alt="" style="--photo-delay: 24s">
       <img class="top-photo-panel__image" src="assets/weather-photos/weather-photo-6.png" alt="" style="--photo-delay: 30s">
-    <header class="masthead">
-      <div>
-        <h1 id="forecastTitle">Portland, OR: Nine Day Forecast</h1>
-        <p class="subtitle" id="forecastSubtitle">Short-range HRRR/NAM blend with ECMWF extended guidance for Portland, OR.</p>
-      </div>
-      <div class="stamp">
-        <span>Today</span>
-        <strong id="todayStamp">Loading...</strong>
-        <span id="updatedStamp">Fetching model data</span>
-      </div>
-    </header>
+      <header class="masthead">
+        <div>
+          <h1 id="forecastTitle">Portland, OR: Nine Day Forecast</h1>
+          <nav class="location-toggle" id="favoritesList" aria-label="Favorite forecast locations"></nav>
 
-    <section class="current-conditions" id="currentConditions" aria-live="polite">
-      <div class="source-note">Loading current NWS conditions...</div>
-    </section>
+          <section class="location-tools" aria-label="Find another forecast location">
+            <form class="location-search-form" id="locationSearchForm">
+              <label for="locationSearchInput">City or ZIP code</label>
+              <input id="locationSearchInput" type="search" autocomplete="postal-code" placeholder="Enter city or ZIP code">
+              <button type="submit">Search</button>
+              <button type="button" id="currentPinToggle" aria-pressed="true">Unpin Current</button>
+            </form>
+            <p class="source-note" id="locationSearchStatus">Pinned favorites stay on this browser unless you unpin them.</p>
+            <div class="search-results" id="locationSearchResults" aria-live="polite"></div>
+          </section>
 
-    <nav class="location-toggle" id="favoritesList" aria-label="Favorite forecast locations"></nav>
+          <p class="subtitle" id="forecastSubtitle">Short-range HRRR/NAM blend with ECMWF extended guidance for Portland, OR.</p>
+        </div>
+        <div class="stamp">
+          <span>Today</span>
+          <strong id="todayStamp">Loading...</strong>
+          <span id="updatedStamp">Fetching model data</span>
+        </div>
+      </header>
 
-    <section class="location-tools" aria-label="Find another forecast location">
-      <form class="location-search-form" id="locationSearchForm">
-        <label for="locationSearchInput">City or ZIP code</label>
-        <input id="locationSearchInput" type="search" autocomplete="postal-code" placeholder="Enter city or ZIP code">
-        <button type="submit">Search</button>
-        <button type="button" id="currentPinToggle" aria-pressed="true">Unpin Current</button>
-      </form>
-      <p class="source-note" id="locationSearchStatus">Pinned favorites stay on this browser unless you unpin them.</p>
-      <div class="search-results" id="locationSearchResults" aria-live="polite"></div>
-    </section>
+      <section class="current-conditions" id="currentConditions" aria-live="polite">
+        <div class="source-note">Loading current NWS conditions...</div>
+      </section>
     </section>
 
     <section class="alerts" aria-labelledby="alertsTitle">
@@ -1834,7 +1894,7 @@
     <section class="forecast-grid" id="forecastGrid" aria-live="polite"></section>
 
     <footer>
-      <p class="source-note">Forecast cards use computer model guidance from Open-Meteo. The forecast uses HRRR/GFS, NAM, and NBM for days 1-2, then NBM only for days 3-9. The NWS feed is used for current conditions and active watches, warnings, advisories, and statements.</p>
+      <p class="source-note">Forecast cards use computer model guidance from Open-Meteo. For supported U.S. locations, days 1-2 blend HRRR/GFS, NAM, and NBM, while days 3-9 blend ECMWF and NBM; freezing levels also draw from GFS. Locations outside the supported U.S. blend area use GFS guidance. The NWS feed is used for current conditions and active watches, warnings, advisories, and statements.</p>
       <p class="source-note">Potential record high/low coloring compares the forecast temperature against Open-Meteo historical reanalysis daily extremes from 1991 through last year for the same point location and calendar date.</p>
       <p class="source-note">Severe Chance is a model-derived proxy from thunderstorm probability, CAPE, wind gusts, and rain amount; it is not an official severe weather outlook.</p>
       <p class="source-note">City and ZIP search uses geocoding only to find latitude and longitude; forecast cards still use the model guidance described above.</p>
@@ -2375,6 +2435,7 @@
     const snowyKinds = new Set(["snow"]);
     const icyKinds = new Set(["ice"]);
     const stormyKinds = new Set(["storm"]);
+    const heavyRainDailyThreshold = 1;
     const iconData = {};
     const embeddedForecastData = {};
     const iconBase = "assets/twc-mega/";
@@ -2430,8 +2491,10 @@
       const severeChance = clampPercent(metrics.severe);
       const rainAmount = Number(metrics.rainAmount) || 0;
       const snowAmount = Number(metrics.snowAmount) || 0;
+      const dailyRainAmount = Number(metrics.dailyRainAmount);
+      const heavyRainAmount = Number.isFinite(dailyRainAmount) ? dailyRainAmount : rainAmount;
       const temp = Number(metrics.temp);
-      const heavyRain = rainAmount >= 0.25 || rainChance >= 70 || [65, 82].includes(numericCode);
+      const heavyRain = heavyRainAmount > heavyRainDailyThreshold;
       const steadyRain = rainAmount >= 0.08 || rainChance >= 40 || [63, 81].includes(numericCode);
       const heavySnow = snowAmount >= 1 || snowChance >= 70 || [75, 86].includes(numericCode);
       const steadySnow = snowAmount >= 0.1 || snowChance >= 35 || [73, 85].includes(numericCode);
@@ -2584,8 +2647,10 @@
 
     function rainIntensityClass(metrics = {}) {
       const amount = Number(metrics.rainAmount) || 0;
+      const dailyAmount = Number(metrics.dailyRainAmount);
+      const heavyAmount = Number.isFinite(dailyAmount) ? dailyAmount : amount;
       const chance = clampPercent(metrics.rain);
-      if (amount >= 0.25 || chance >= 70) return "rain-heavy";
+      if (heavyAmount > heavyRainDailyThreshold) return "rain-heavy";
       if (amount >= 0.08 || chance >= 40) return "rain-steady";
       return "rain-chance";
     }
@@ -2716,6 +2781,16 @@
       return indices;
     }
 
+    function meridiemIndices(hourly, indices, isPm) {
+      const times = hourly.time || [];
+      return indices.filter((index) => {
+        const match = String(times[index] || "").match(/T(\d{2})/);
+        if (!match) return false;
+        const hour = Number(match[1]);
+        return isPm ? hour >= 12 : hour < 12;
+      });
+    }
+
     function maxForIndices(hourly, key, indices) {
       let max = -Infinity;
       let hasValue = false;
@@ -2750,6 +2825,12 @@
         return sum + value;
       }, 0);
       return hasValue ? total : null;
+    }
+
+    function dailyRainAmountFor(data, isoDate, dailyIndex) {
+      const dailyRain = Number(data.daily?.rain_sum?.[dailyIndex]);
+      if (Number.isFinite(dailyRain)) return dailyRain;
+      return sumForIndices(data.hourly || {}, "rain", hourlyIndicesForDay(data.hourly || {}, isoDate));
     }
 
     function snowLevelForIndices(data, indices) {
@@ -2868,6 +2949,18 @@
         .sort((a, b) => b[1] - a[1] || severeRank(b[0]) - severeRank(a[0]))[0][0];
     }
 
+    function eventWeatherCode(hourly, indices, fallbackCode) {
+      const values = hourly.weather_code || [];
+      const codes = indices
+        .map((index) => Number(values[index]))
+        .filter(Number.isFinite);
+
+      if (!codes.length) return fallbackCode;
+
+      return codes
+        .sort((a, b) => severeRank(b) - severeRank(a) || b - a)[0];
+    }
+
     function severeRank(code) {
       if ([95, 96, 99].includes(code)) return 5;
       if ([71, 73, 75, 77, 85, 86].includes(code)) return 4;
@@ -2888,6 +2981,7 @@
       const windDirection = windDirectionForIndices(data.hourly, indices);
       const cape = numericMaxForIndices(data.hourly, "cape", indices);
       const rainAmount = sumForIndices(data.hourly, "rain", indices);
+      const dailyRainAmount = dailyRainAmountFor(data, isoDate, dailyIndex);
       const snowAmount = sumForIndices(data.hourly, "snowfall", indices);
       const snowLevel = snowLevelForIndices(data, indices);
       const thunder = maxForIndices(data.hourly, "thunderstorm_probability", indices);
@@ -2900,9 +2994,9 @@
         dominantWeatherCode(data.hourly, indices, data.daily.weather_code[dailyIndex]),
         { thunder, rain, snow, rainAmount, snowAmount, severe }
       );
-      const weather = weatherFor(code, period, { windSpeed, windGust, rain, rainAmount, snow, snowAmount, thunder, severe, temp });
+      const weather = weatherFor(code, period, { windSpeed, windGust, rain, rainAmount, dailyRainAmount, snow, snowAmount, thunder, severe, temp });
 
-      return {
+      const summary = {
         period,
         title: isDaytime ? "Daytime" : "Nighttime",
         tempLabel: isDaytime ? "High" : "Low",
@@ -2911,6 +3005,7 @@
         weather,
         rain,
         rainAmount,
+        dailyRainAmount,
         snow,
         snowAmount,
         snowLevel,
@@ -2923,6 +3018,102 @@
         startTime: interval.start,
         endTime: interval.end
       };
+
+      return isDaytime ? withAmPmIconSequence(summary, data, isoDate, dailyIndex) : summary;
+    }
+
+    function weatherSliceForIndices(data, dailyIndex, indices, period, fallbackCode, fallbackTemp) {
+      const hourly = data.hourly || {};
+      const windSpeed = numericMaxForIndices(hourly, "wind_speed_10m", indices);
+      const windGust = numericMaxForIndices(hourly, "wind_gusts_10m", indices);
+      const cape = numericMaxForIndices(hourly, "cape", indices);
+      const rainAmount = sumForIndices(hourly, "rain", indices);
+      const dailyRainAmount = dailyRainAmountFor(data, data.daily?.time?.[dailyIndex] || "", dailyIndex);
+      const snowAmount = sumForIndices(hourly, "snowfall", indices);
+      const thunder = maxForIndices(hourly, "thunderstorm_probability", indices);
+      const rain = maxForIndices(hourly, "rain_probability", indices);
+      const snow = maxForIndices(hourly, "snowfall_probability", indices);
+      const severe = severeChance(thunder, cape, windGust, rainAmount);
+      const temp = periodTemperature(hourly, indices, true, fallbackTemp);
+      const fallback = fallbackCode ?? data.daily.weather_code?.[dailyIndex];
+      const code = representativeTransitionWeatherCode(
+        eventWeatherCode(hourly, indices, fallback),
+        { thunder, rain, snow, rainAmount, snowAmount, severe }
+      );
+      return {
+        code,
+        weather: weatherFor(code, period, { windSpeed, windGust, rain, rainAmount, dailyRainAmount, snow, snowAmount, thunder, severe, temp }),
+        metrics: { rain, rainAmount, dailyRainAmount, snow, snowAmount, thunder, severe }
+      };
+    }
+
+    function withAmPmIconSequence(summary, data, isoDate, dailyIndex) {
+      const dayIndices = hourlyIndicesForDay(data.hourly || {}, isoDate);
+      const amIndices = meridiemIndices(data.hourly || {}, dayIndices, false);
+      const pmIndices = meridiemIndices(data.hourly || {}, dayIndices, true);
+      if (!amIndices.length || !pmIndices.length) return summary;
+
+      const am = weatherSliceForIndices(data, dailyIndex, amIndices, "day", summary.code, summary.temp);
+      const pm = weatherSliceForIndices(data, dailyIndex, pmIndices, "day", summary.code, summary.temp);
+      if (!shouldShowAmPmIconSequence(am, pm)) return summary;
+
+      return {
+        ...summary,
+        iconSequence: [
+          { label: "AM", weather: am.weather },
+          { label: "PM", weather: pm.weather }
+        ]
+      };
+    }
+
+    function representativeTransitionWeatherCode(baseCode, metrics) {
+      const thunder = clampPercent(metrics.thunder);
+      const severe = clampPercent(metrics.severe);
+      const rain = clampPercent(metrics.rain);
+      const snow = clampPercent(metrics.snow);
+      const rainAmount = Number(metrics.rainAmount) || 0;
+      const snowAmount = Number(metrics.snowAmount) || 0;
+      const normalizedBaseCode = isStormCode(baseCode) && thunder < 8 ? 3 : baseCode;
+
+      if (thunder >= 8) return severe >= 10 ? 96 : 95;
+      if (isIceCode(normalizedBaseCode) && (rain >= 12 || snow >= 12 || rainAmount >= 0.01 || snowAmount >= 0.01)) return normalizedBaseCode;
+      if (snow >= 15 || snowAmount >= 0.05) return snowAmount >= 0.5 ? 75 : 71;
+      if (rain >= 40 || rainAmount >= 0.12) return 63;
+      if (rain >= 15 || rainAmount >= 0.02) return 61;
+      return normalizedBaseCode;
+    }
+
+    function shouldShowAmPmIconSequence(am, pm) {
+      const amKey = transitionWeatherKey(am.weather);
+      const pmKey = transitionWeatherKey(pm.weather);
+      if (amKey !== pmKey) return true;
+      if (am.weather.iconFile !== pm.weather.iconFile) return true;
+      return transitionEventScore(am.metrics) !== transitionEventScore(pm.metrics);
+    }
+
+    function transitionWeatherKey(weather) {
+      if (!weather) return "unknown";
+      if (weather.kind === "clear" || weather.kind === "mostly-clear") return "sun";
+      if (weather.kind === "rain") return "rain";
+      if (weather.kind === "snow") return "snow";
+      if (weather.kind === "ice") return "ice";
+      if (weather.kind === "storm") return weather.thundersnow ? "thundersnow" : "storm";
+      return weather.kind || weather.label || "unknown";
+    }
+
+    function transitionEventScore(metrics = {}) {
+      const thunder = clampPercent(metrics.thunder);
+      const severe = clampPercent(metrics.severe);
+      const rain = clampPercent(metrics.rain);
+      const snow = clampPercent(metrics.snow);
+      const rainAmount = Number(metrics.rainAmount) || 0;
+      const snowAmount = Number(metrics.snowAmount) || 0;
+
+      if (severe >= 10) return "severe";
+      if (thunder >= 8) return "storm";
+      if (snow >= 15 || snowAmount >= 0.05) return snow >= 50 || snowAmount >= 0.25 ? "snow" : "snow-chance";
+      if (rain >= 15 || rainAmount >= 0.02) return rain >= 50 || rainAmount >= 0.08 ? "rain" : "rain-chance";
+      return "quiet";
     }
 
     function hourlySummary(data, index) {
@@ -3174,6 +3365,11 @@
     }
 
     function conditionText(summary) {
+      if (summary.iconSequence?.length === 2) {
+        const [am, pm] = summary.iconSequence;
+        return `${am.weather.label} AM, ${pm.weather.label} PM`;
+      }
+
       if (summary.weather.kind === "storm") {
         const severeChance = clampPercent(summary.severe);
         const thunderChance = clampPercent(summary.thunder);
@@ -3256,9 +3452,7 @@
           <div class="period-title">
             <h3>${summary.title}</h3>
           </div>
-          <div class="icon-wrap ${summary.period} ${escapeAttribute(summary.weather.iconClass)}">
-            <img class="weather-icon-img" src="${escapeAttribute(summary.weather.iconUrl)}" alt="${escapeAttribute(summary.weather.label)}">
-          </div>
+          ${renderPeriodIcon(summary)}
           <div class="condition">${escapeHtml(conditionText(summary))}</div>
           <div class="temp${tempRecordClass(summary)}" style="--temp-color: ${temperatureColor(summary.temp)}; --temp-bg: ${temperatureTextBackground(summary.temp)}; --temp-stroke: ${temperatureTextStroke(summary.temp)}; --temp-shadow: ${temperatureTextShadow(summary.temp)}"${tempRecordTitle(summary)}>
             <span class="label">${summary.tempLabel} Temp</span>
@@ -3274,6 +3468,28 @@
             ${probabilityRow("Severe Chance", summary.severe, "severe")}
           </div>
         </section>
+      `;
+    }
+
+    function renderPeriodIcon(summary) {
+      if (!summary.iconSequence?.length) {
+        return `
+          <div class="icon-wrap ${summary.period} ${escapeAttribute(summary.weather.iconClass)}">
+            <img class="weather-icon-img" src="${escapeAttribute(summary.weather.iconUrl)}" alt="${escapeAttribute(summary.weather.label)}">
+          </div>
+        `;
+      }
+
+      return `
+        <div class="icon-wrap icon-sequence ${summary.period}" aria-label="${escapeAttribute(conditionText(summary))}">
+          ${summary.iconSequence.map((entry, index) => `
+            ${index === 1 ? `<span class="icon-sequence-arrow" aria-hidden="true">&rarr;</span>` : ""}
+            <div class="icon-wrap am-pm-icon-wrap ${escapeAttribute(entry.weather.period)} ${escapeAttribute(entry.weather.iconClass)}">
+              <span class="am-pm-label">${escapeHtml(entry.label)}</span>
+              <img class="weather-icon-img" src="${escapeAttribute(entry.weather.iconUrl)}" alt="${escapeAttribute(`${entry.label} ${entry.weather.label}`)}">
+            </div>
+          `).join("")}
+        </div>
       `;
     }
 
