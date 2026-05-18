@@ -1866,7 +1866,7 @@
             <div class="search-results" id="locationSearchResults" aria-live="polite"></div>
           </section>
 
-          <p class="subtitle" id="forecastSubtitle">Short-range HRRR/NAM blend with ECMWF extended guidance for Portland, OR.</p>
+          <p class="subtitle" id="forecastSubtitle">HRRR/GFS guidance for days 1-2 with ECMWF guidance for days 3-9 for Portland, OR.</p>
         </div>
         <div class="stamp">
           <span>Today</span>
@@ -1894,7 +1894,7 @@
     <section class="forecast-grid" id="forecastGrid" aria-live="polite"></section>
 
     <footer>
-      <p class="source-note">Forecast cards use computer model guidance from Open-Meteo. For supported U.S. locations, days 1-2 blend HRRR/GFS, NAM, and NBM, while days 3-9 blend ECMWF and NBM; freezing levels also draw from GFS. Locations outside the supported U.S. blend area use GFS guidance. The NWS feed is used for current conditions and active watches, warnings, advisories, and statements.</p>
+      <p class="source-note">Forecast cards use computer model guidance from Open-Meteo. For supported U.S. locations, days 1-2 use HRRR/GFS guidance and days 3-9 use ECMWF guidance only. Locations outside the supported U.S. range use GFS guidance. The NWS feed is used for current conditions and active watches, warnings, advisories, and statements.</p>
       <p class="source-note">Potential record high/low coloring compares the forecast temperature against Open-Meteo historical reanalysis daily extremes from 1991 through last year for the same point location and calendar date.</p>
       <p class="source-note">Severe Chance is a model-derived proxy from thunderstorm probability, CAPE, wind gusts, and rain amount; it is not an official severe weather outlook.</p>
       <p class="source-note">City and ZIP search uses geocoding only to find latitude and longitude; forecast cards still use the model guidance described above.</p>
@@ -1903,7 +1903,8 @@
         Sources:
         <a id="modelLink" href="#" target="_blank" rel="noreferrer">model JSON</a>,
         <a id="alertsLink" href="#" target="_blank" rel="noreferrer">NWS alert JSON</a>,
-        <a href="https://open-meteo.com/en/docs/gfs-api" target="_blank" rel="noreferrer">Open-Meteo GFS/NBM docs</a>,
+        <a href="https://open-meteo.com/en/docs/gfs-api" target="_blank" rel="noreferrer">Open-Meteo GFS docs</a>,
+        <a href="https://open-meteo.com/en/docs/ecmwf-api" target="_blank" rel="noreferrer">Open-Meteo ECMWF docs</a>,
         <a href="https://open-meteo.com/en/docs/geocoding-api" target="_blank" rel="noreferrer">Open-Meteo geocoding docs</a>,
         <a href="https://api.zippopotam.us/" target="_blank" rel="noreferrer">ZIP geocoding</a>,
         <a href="https://open-meteo.com/en/docs/historical-weather-api" target="_blank" rel="noreferrer">Open-Meteo historical reanalysis docs</a>,
@@ -1966,11 +1967,11 @@
 
     const modelModes = {
       blend: {
-        label: "HRRR/NAM + ECMWF",
+        label: "HRRR/GFS + ECMWF",
         subtitle: (location) => useGlobalModel(location)
           ? `GFS computer model guidance for ${location.name}.`
-          : `Short-range HRRR/NAM blend with ECMWF extended guidance for ${location.name}.`,
-        loading: (location) => useGlobalModel(location) ? "GFS model data" : "HRRR/NAM plus ECMWF model data"
+          : `HRRR/GFS guidance for days 1-2 with ECMWF guidance for days 3-9 for ${location.name}.`,
+        loading: (location) => useGlobalModel(location) ? "GFS model data" : "HRRR/GFS plus ECMWF model data"
       }
     };
 
@@ -2023,8 +2024,8 @@
     function buildForecastUrl(location, options = {}) {
       const modelPoint = modelLocation(location);
       const {
-        model = useGlobalModel(location) ? "gfs_seamless" : "ncep_nbm_conus",
-        endpoint = useGlobalModel(location) ? "gfs" : "forecast",
+        model = useGlobalModel(location) ? "gfs_seamless" : "gfs_hrrr",
+        endpoint = "gfs",
         forecastDays = "9",
         daily = dailyVariables,
         hourly = hourlyVariables
@@ -4171,24 +4172,9 @@
           url: buildForecastUrl(location, { model: "gfs_hrrr", endpoint: "gfs" })
         },
         {
-          key: "nam",
-          label: "NAM",
-          url: buildForecastUrl(location, { model: "ncep_nam_conus", endpoint: "gfs", forecastDays: "3" })
-        },
-        {
           key: "ecmwf",
           label: "ECMWF",
           url: buildForecastUrl(location, { model: "", endpoint: "ecmwf", daily: ecmwfDailyVariables, hourly: ecmwfHourlyVariables })
-        },
-        {
-          key: "nbm",
-          label: "NBM",
-          url: buildForecastUrl(location, { model: "ncep_nbm_conus", endpoint: "gfs" })
-        },
-        {
-          key: "gfsSnowLevel",
-          label: "GFS Snow Level",
-          url: buildForecastUrl(location, { model: "gfs_seamless", endpoint: "gfs" })
         }
       ];
     }
@@ -4236,7 +4222,7 @@
 
     function blendForecasts(rawSources) {
       const sources = rawSources.map(prepareSource);
-      const baseSource = sources.find((source) => source.key === "nbm") || sources[0];
+      const baseSource = sources.find((source) => source.key === "hrrrGfs") || sources.find((source) => source.key === "gfs") || sources[0];
       const blended = JSON.parse(JSON.stringify(baseSource.data));
       const hourlyTimes = blended.hourly?.time || [];
       const dailyTimes = blended.daily?.time || [];
@@ -4245,17 +4231,17 @@
         if (key === "is_day") return;
         blended.hourly[key] = hourlyTimes.map((time, index) => {
           const values = valuesForBlend(sources, "hourly", key, time, index);
-          if (key === "weather_code") return blendWeatherCode(values, blended.hourly[key]?.[index]);
-          if (key === "wind_direction_10m") return blendDirection(values, blended.hourly[key]?.[index]);
-          return blendAverage(values, blended.hourly[key]?.[index]);
+          if (key === "weather_code") return blendWeatherCode(values, null);
+          if (key === "wind_direction_10m") return blendDirection(values, null);
+          return blendAverage(values, null);
         });
       });
 
       dailyVariables.forEach((key) => {
         blended.daily[key] = dailyTimes.map((time, index) => {
           const values = valuesForBlend(sources, "daily", key, time, index);
-          if (key === "weather_code") return blendWeatherCode(values, blended.daily[key]?.[index]);
-          return blendAverage(values, blended.daily[key]?.[index]);
+          if (key === "weather_code") return blendWeatherCode(values, null);
+          return blendAverage(values, null);
         });
       });
 
@@ -4264,6 +4250,13 @@
     }
 
     function valuesForBlend(sources, scope, key, time, index) {
+      if (sources.length === 1 && sources[0].key === "gfs") {
+        return [sources[0][`${scope}Maps`]?.[key]?.get(time)]
+          .filter((value) => value !== null && value !== undefined && value !== "")
+          .map(Number)
+          .filter(Number.isFinite);
+      }
+
       const preferredKeys = preferredBlendSourceKeys(scope, key, index);
 
       return preferredKeys
@@ -4276,14 +4269,9 @@
     }
 
     function preferredBlendSourceKeys(scope, key, index) {
-      if (scope === "hourly" && key === "freezing_level_height") {
-        return index < 48
-          ? ["hrrrGfs", "nam", "gfsSnowLevel", "gfs", "nbm"]
-          : ["ecmwf", "gfsSnowLevel", "gfs", "nbm"];
-      }
       return scope === "hourly" && index < 48 || scope === "daily" && index < 2
-        ? ["hrrrGfs", "nam", "nbm"]
-        : ["ecmwf", "nbm"];
+        ? ["hrrrGfs"]
+        : ["ecmwf"];
     }
 
     function blendAverage(values, fallback) {
@@ -4324,7 +4312,9 @@
       currentForecastData = null;
       currentAlerts = [];
       currentAlertsById = new Map();
-      forecastUrl = buildForecastUrl(location);
+      forecastUrl = useGlobalModel(location)
+        ? buildForecastUrl(location)
+        : buildForecastUrl(location, { model: "gfs_hrrr", endpoint: "gfs" });
       alertsUrl = buildAlertsUrl(location);
       const modeConfig = modelModes.blend;
       const loadingLabel = typeof modeConfig.loading === "function" ? modeConfig.loading(location) : modeConfig.loading;
@@ -4335,7 +4325,7 @@
       document.querySelector("#modelLink").href = forecastUrl;
       document.querySelector("#modelLink").textContent = useGlobalModel(location)
         ? "GFS source JSON"
-        : "NBM source JSON";
+        : "HRRR/GFS source JSON";
       document.querySelector("#alertsLink").href = alertsUrl;
       renderFavorites();
 
