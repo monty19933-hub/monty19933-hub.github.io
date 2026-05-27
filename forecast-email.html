@@ -1967,11 +1967,11 @@
 
     const modelModes = {
       blend: {
-        label: "HRRR/GFS + ECMWF",
+        label: "HRRR/GFS + ECMWF + NBM thunder chance",
         subtitle: (location) => useGlobalModel(location)
           ? `GFS computer model guidance for ${location.name}.`
-          : `HRRR/GFS guidance for days 1-2 with ECMWF guidance for days 3-9 for ${location.name}.`,
-        loading: (location) => useGlobalModel(location) ? "GFS model data" : "HRRR/GFS plus ECMWF model data"
+          : `HRRR/GFS guidance for days 1-2 with ECMWF guidance for days 3-9, plus NBM thunder chances for ${location.name}.`,
+        loading: (location) => useGlobalModel(location) ? "GFS model data" : "HRRR/GFS plus ECMWF model data and NBM thunder chances"
       }
     };
 
@@ -2019,6 +2019,16 @@
       "precipitation_type",
       "lightning_density",
       "k_index"
+    ];
+
+    const nbmThunderHourlyVariables = [
+      "thunderstorm_probability",
+      "precipitation_probability",
+      "weather_code",
+      "cape",
+      "rain",
+      "wind_gusts_10m",
+      "is_day"
     ];
 
     function buildForecastUrl(location, options = {}) {
@@ -4186,6 +4196,11 @@
           key: "ecmwf",
           label: "ECMWF",
           url: buildForecastUrl(location, { model: "", endpoint: "ecmwf", daily: ecmwfDailyVariables, hourly: ecmwfHourlyVariables })
+        },
+        {
+          key: "nbmThunder",
+          label: "NBM Thunder Chance",
+          url: buildForecastUrl(location, { model: "ncep_nbm_conus", endpoint: "forecast", daily: ["weather_code", "precipitation_probability_max", "rain_sum"], hourly: nbmThunderHourlyVariables })
         }
       ];
     }
@@ -4242,6 +4257,7 @@
         if (key === "is_day") return;
         blended.hourly[key] = hourlyTimes.map((time, index) => {
           const values = valuesForBlend(sources, "hourly", key, time, index);
+          if (key === "thunderstorm_probability") return firstBlendValue(values, null);
           if (key === "weather_code") return blendWeatherCode(values, null);
           if (key === "wind_direction_10m") return blendDirection(values, null);
           return blendAverage(values, null);
@@ -4256,7 +4272,12 @@
         });
       });
 
-      blended.modelLabel = sources.length === 1 && sources[0].key === "gfs" ? "GFS" : modelModes.blend.label;
+      const hasNbmThunder = sources.some((source) => source.key === "nbmThunder");
+      blended.modelLabel = sources.length === 1 && sources[0].key === "gfs"
+        ? "GFS"
+        : hasNbmThunder
+          ? modelModes.blend.label
+          : "HRRR/GFS + ECMWF";
       return blended;
     }
 
@@ -4280,6 +4301,9 @@
     }
 
     function preferredBlendSourceKeys(scope, key, index) {
+      if (scope === "hourly" && key === "thunderstorm_probability") {
+        return ["nbmThunder", "hrrrGfs", "gfs", "ecmwf"];
+      }
       return scope === "hourly" && index < 48 || scope === "daily" && index < 2
         ? ["hrrrGfs"]
         : ["ecmwf"];
@@ -4288,6 +4312,10 @@
     function blendAverage(values, fallback) {
       if (!values.length) return fallback;
       return values.reduce((sum, value) => sum + value, 0) / values.length;
+    }
+
+    function firstBlendValue(values, fallback) {
+      return values.length ? values[0] : fallback;
     }
 
     function blendDirection(values, fallback) {
