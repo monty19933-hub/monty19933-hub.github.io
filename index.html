@@ -2488,8 +2488,10 @@
       const isNight = period === "night";
       const rainChance = clampPercent(metrics.rain);
       const snowChance = clampPercent(metrics.snow);
-      const thunderChance = clampPercent(metrics.thunder);
-      const severeChance = clampPercent(metrics.severe);
+      const thunderKnown = Number.isFinite(metrics.thunder);
+      const severeKnown = Number.isFinite(metrics.severe);
+      const thunderChance = thunderKnown ? clampPercent(metrics.thunder) : null;
+      const severeChance = severeKnown ? clampPercent(metrics.severe) : null;
       const rainAmount = Number(metrics.rainAmount) || 0;
       const snowAmount = Number(metrics.snowAmount) || 0;
       const dailyRainAmount = Number(metrics.dailyRainAmount);
@@ -2511,16 +2513,16 @@
         const severeStorm = isSevereStorm(numericCode, metrics);
         if (isThundersnow(kind, metrics)) {
           const label = severeStorm
-            ? (severeChance > 20 ? "Severe Thundersnow" : "Chance of Severe Thundersnow")
-            : (thunderChance > 30 ? "Thundersnow" : "Chance of Thundersnow");
+            ? (!severeKnown || severeChance > 20 ? "Severe Thundersnow" : "Chance of Severe Thundersnow")
+            : (!thunderKnown || thunderChance > 30 ? "Thundersnow" : "Chance of Thundersnow");
           if (severeStorm) return use(label, windy ? "Snow with Strong Thunder and Wind.png" : "Snow with Strong Thunder.png");
           return use(label, windy ? "Snow with Thunder and Wind.png" : "Snow with Thunder.png");
         }
 
         if (severeStorm) {
-          const label = severeChance > 20 ? "Severe Thunderstorms" : "Chance of Severe Thunderstorms";
+          const label = !severeKnown || severeChance > 20 ? "Severe Thunderstorms" : "Chance of Severe Thunderstorms";
           if (activeSnow) return use(label, windy ? "Snow with Strong Thunder and Wind.png" : "Snow with Strong Thunder.png");
-          if (severeChance <= 20) {
+          if (severeKnown && severeChance <= 20) {
             return use(label, isNight ? "Isolated Strong Thunderstorms (night).png" : "Isolated Strong Thunderstorms (day).png", {
               iconClass: !isNight ? "sunny-storm" : "",
               intensityClass: "rain-chance"
@@ -2530,9 +2532,9 @@
           return use(label, windy ? "Strong Thunderstorms with Wind.png" : "Strong Thunderstorms.png");
         }
 
-        const label = thunderChance > 30 ? "Thunderstorms" : "Chance of Thunderstorms";
+        const label = !thunderKnown || thunderChance > 30 ? "Thunderstorms" : "Chance of Thunderstorms";
         if (activeSnow) return use(label, windy ? "Snow with Thunder and Wind.png" : "Snow with Thunder.png");
-        if (thunderChance <= 30) {
+        if (thunderKnown && thunderChance <= 30) {
           return use(label, isNight ? "Isolated Thunderstorms (night).png" : "Isolated Thunderstorms (day).png", {
             iconClass: !isNight ? "sunny-storm" : "",
             intensityClass: "rain-chance"
@@ -2962,6 +2964,12 @@
         .sort((a, b) => severeRank(b) - severeRank(a) || b - a)[0];
     }
 
+    function stormAwareWeatherCode(hourly, indices, fallbackCode) {
+      const eventCode = eventWeatherCode(hourly, indices, fallbackCode);
+      if (isStormCode(eventCode)) return eventCode;
+      return dominantWeatherCode(hourly, indices, fallbackCode);
+    }
+
     function severeRank(code) {
       if ([95, 96, 99].includes(code)) return 5;
       if ([71, 73, 75, 77, 85, 86].includes(code)) return 4;
@@ -2992,7 +3000,7 @@
       const temp = periodTemperature(data.hourly, indices, isDaytime, fallbackTemp);
       const interval = alertIntervalForPeriod(data.hourly, isoDate, isDaytime);
       const code = representativeWeatherCode(
-        dominantWeatherCode(data.hourly, indices, data.daily.weather_code[dailyIndex]),
+        stormAwareWeatherCode(data.hourly, indices, data.daily.weather_code[dailyIndex]),
         { thunder, rain, snow, rainAmount, snowAmount, severe }
       );
       const weather = weatherFor(code, period, { windSpeed, windGust, rain, rainAmount, dailyRainAmount, snow, snowAmount, thunder, severe, temp });
@@ -3068,15 +3076,16 @@
     }
 
     function representativeTransitionWeatherCode(baseCode, metrics) {
-      const thunder = clampPercent(metrics.thunder);
+      const thunderKnown = Number.isFinite(metrics.thunder);
+      const thunder = thunderKnown ? clampPercent(metrics.thunder) : null;
       const severe = clampPercent(metrics.severe);
       const rain = clampPercent(metrics.rain);
       const snow = clampPercent(metrics.snow);
       const rainAmount = Number(metrics.rainAmount) || 0;
       const snowAmount = Number(metrics.snowAmount) || 0;
-      const normalizedBaseCode = isStormCode(baseCode) && thunder < 8 ? 3 : baseCode;
+      const normalizedBaseCode = isStormCode(baseCode) && thunderKnown && thunder < 8 ? 3 : baseCode;
 
-      if (thunder >= 8) return severe >= 10 ? 96 : 95;
+      if (thunderKnown && thunder >= 8) return severe >= 10 ? 96 : 95;
       if (isIceCode(normalizedBaseCode) && (rain >= 12 || snow >= 12 || rainAmount >= 0.01 || snowAmount >= 0.01)) return normalizedBaseCode;
       if (snow >= 15 || snowAmount >= 0.05) return snowAmount >= 0.5 ? 75 : 71;
       if (rain >= 40 || rainAmount >= 0.12) return 63;
@@ -3163,15 +3172,16 @@
     }
 
     function representativeWeatherCode(baseCode, metrics) {
-      const thunder = clampPercent(metrics.thunder);
+      const thunderKnown = Number.isFinite(metrics.thunder);
+      const thunder = thunderKnown ? clampPercent(metrics.thunder) : null;
       const severe = clampPercent(metrics.severe);
       const rain = clampPercent(metrics.rain);
       const snow = clampPercent(metrics.snow);
       const rainAmount = Number(metrics.rainAmount) || 0;
       const snowAmount = Number(metrics.snowAmount) || 0;
-      const normalizedBaseCode = isStormCode(baseCode) && thunder < 10 ? 3 : baseCode;
+      const normalizedBaseCode = isStormCode(baseCode) && thunderKnown && thunder < 10 ? 3 : baseCode;
 
-      if (thunder >= 10) return severe >= 10 ? 96 : 95;
+      if (thunderKnown && thunder >= 10) return severe >= 10 ? 96 : 95;
       if (isIceCode(normalizedBaseCode) && (rain >= 15 || snow >= 15 || rainAmount >= 0.02 || snowAmount >= 0.02)) return normalizedBaseCode;
       if (snow >= 20 || snowAmount >= 0.1) return snowAmount >= 1 ? 75 : 71;
       if (rain >= 55 || rainAmount >= 0.35) return 63;
